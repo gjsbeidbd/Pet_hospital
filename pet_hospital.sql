@@ -7,6 +7,31 @@ DROP DATABASE IF EXISTS pet_hospital;
 CREATE DATABASE IF NOT EXISTS pet_hospital CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE pet_hospital;
 
+-- 宠物种类表
+CREATE TABLE pet_species (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    species_name VARCHAR(50) NOT NULL COMMENT '种类名称（如：狗、猫、鸟等）',
+    description TEXT COMMENT '种类描述',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '是否启用',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY unique_species_name (species_name)
+) COMMENT='宠物种类表';
+
+-- 宠物品种表
+CREATE TABLE pet_breeds (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    species_id BIGINT NOT NULL COMMENT '种类 ID',
+    breed_name VARCHAR(100) NOT NULL COMMENT '品种名称',
+    description TEXT COMMENT '品种描述',
+    image VARCHAR(255) COMMENT '品种图片路径',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '是否启用',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (species_id) REFERENCES pet_species(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_species_breed (species_id, breed_name)
+) COMMENT='宠物品种表';
+
 -- 用户表（宠物主人）
 CREATE TABLE users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -162,12 +187,14 @@ CREATE TABLE medical_records (
 -- 药品库存表
 CREATE TABLE drug_inventory (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    drug_name VARCHAR(200) NOT NULL COMMENT '药品名称',
-    description TEXT COMMENT '描述',
-    quantity INT NOT NULL DEFAULT 0 COMMENT '数量',
-    unit_price DECIMAL(10,2) NOT NULL COMMENT '单价',
-    supplier VARCHAR(200) COMMENT '供应商',
-    expiration_date DATE COMMENT '过期日期',
+    code VARCHAR(20) UNIQUE NOT NULL COMMENT '药品编号',
+    name VARCHAR(200) NOT NULL COMMENT '药品名称',
+    type VARCHAR(50) NOT NULL COMMENT '药品分类（如：抗生素、疫苗等）',
+    price DECIMAL(10,2) NOT NULL COMMENT '售价',
+    stock INT NOT NULL DEFAULT 0 COMMENT '当前库存数量',
+    warning_stock INT DEFAULT 20 COMMENT '预警库存（低于此值显示缺货）',
+    unit VARCHAR(20) NOT NULL COMMENT '单位（如：盒、支、粒等）',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '是否启用',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) COMMENT='药品库存表';
@@ -210,7 +237,72 @@ CREATE TABLE announcements (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) COMMENT='公告表';
 
+-- 费用管理表
+CREATE TABLE fee_items (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    item_name VARCHAR(200) NOT NULL COMMENT '费用项目名称',
+    category ENUM('诊查费', '治疗费', '手术费', '检查费', '护理费', '其他') NOT NULL COMMENT '费用类别',
+    unit_price DECIMAL(10,2) NOT NULL COMMENT '单价',
+    unit VARCHAR(50) COMMENT '单位（如：次、支等）',
+    description TEXT COMMENT '费用说明',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '是否启用',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) COMMENT='费用管理表';
+
 -- 初始化数据
+
+-- 插入费用项目数据
+INSERT INTO fee_items (item_name, category, unit_price, unit, description, is_active) VALUES
+('普通门诊诊查费', '诊查费', 50.00, '次', '普通门诊挂号及诊查费用', TRUE),
+('专家门诊诊查费', '诊查费', 100.00, '次', '专家门诊挂号及诊查费用', TRUE),
+('急诊诊查费', '诊查费', 80.00, '次', '急诊挂号及诊查费用', TRUE),
+('血常规检查', '检查费', 30.00, '次', '全血细胞计数检查', TRUE),
+('尿常规检查', '检查费', 20.00, '次', '尿液常规检查', TRUE),
+('X 光检查', '检查费', 150.00, '部位', 'X 光拍片检查', TRUE),
+('B 超检查', '检查费', 200.00, '部位', '超声波检查', TRUE),
+('显微镜检查', '检查费', 50.00, '次', '皮肤刮片等显微镜检查', TRUE),
+('静脉注射', '治疗费', 30.00, '次', '静脉注射给药', TRUE),
+('肌肉注射', '治疗费', 20.00, '次', '肌肉注射给药', TRUE),
+('皮下注射', '治疗费', 15.00, '次', '皮下注射给药', TRUE),
+('输液治疗', '治疗费', 50.00, '次', '静脉输液治疗（不含药费）', TRUE),
+('伤口清创术', '治疗费', 100.00, '次', '伤口清理和消毒', TRUE),
+('缝合术', '治疗费', 150.00, '次', '伤口缝合（小）', TRUE),
+('绝育手术', '手术费', 500.00, '台', '公犬/猫去势术', TRUE),
+('卵巢子宫摘除术', '手术费', 800.00, '台', '母犬/猫绝育手术', TRUE),
+('骨折内固定术', '手术费', 2000.00, '台', '骨折手术治疗', TRUE),
+('肿瘤切除术', '手术费', 1500.00, '台', '软组织肿瘤切除', TRUE),
+('住院护理费', '护理费', 100.00, '天', '普通住院护理', TRUE),
+('重症监护费', '护理费', 300.00, '天', 'ICU 重症监护', TRUE),
+('疫苗注射', '其他', 80.00, '针', '传染病疫苗接种', TRUE),
+('狂犬疫苗', '其他', 100.00, '针', '狂犬病疫苗接种', TRUE);
+
+-- 插入宠物种类数据
+INSERT INTO pet_species (species_name, description, is_active) VALUES
+('狗', '人类最忠实的朋友，适合家庭陪伴', TRUE),
+('猫', '独立优雅的动物，适合室内饲养', TRUE),
+('鸟', '色彩斑斓，鸣声悦耳', TRUE),
+('兔子', '温顺可爱，素食动物', TRUE),
+('仓鼠', '小型萌宠，易于饲养', TRUE);
+
+-- 插入宠物品种数据
+INSERT INTO pet_breeds (species_id, breed_name, description, image, is_active) VALUES
+(1, '金毛寻回犬', '友善、聪明、忠诚的大型犬', NULL, TRUE),
+(1, '拉布拉多', '活泼、友好、高能量的大型犬', NULL, TRUE),
+(1, '哈士奇', '精力充沛、友好的雪橇犬', NULL, TRUE),
+(1, '柯基', '活泼、聪明的小型牧牛犬', NULL, TRUE),
+(1, '泰迪', '优雅、活跃的贵宾犬', NULL, TRUE),
+(2, '英国短毛猫', '圆脸胖腮，性格温和', NULL, TRUE),
+(2, '美国短毛猫', '体格强壮，性格独立', NULL, TRUE),
+(2, '布偶猫', '温顺粘人，毛发华丽', NULL, TRUE),
+(2, '暹罗猫', '活泼好动，叫声独特', NULL, TRUE),
+(2, '波斯猫', '长毛高贵，性格安静', NULL, TRUE),
+(3, '鹦鹉', '聪明伶俐，善于模仿', NULL, TRUE),
+(3, '文鸟', '温和安静，羽毛美丽', NULL, TRUE),
+(4, '荷兰垂耳兔', '耳朵下垂，性格温顺', NULL, TRUE),
+(4, '侏儒兔', '体型小巧，活泼可爱', NULL, TRUE),
+(5, '金丝熊', '金黄色毛发，体型较大', NULL, TRUE),
+(5, '三线仓鼠', '背部有三条线，体型较小', NULL, TRUE);
 
 -- 插入默认用户
 INSERT INTO users (username, password, name, phone, email, address, role) VALUES
@@ -262,10 +354,11 @@ INSERT INTO medical_records (pet_id, doctor_id, appointment_id, visit_date, diag
 (1, 1, 1, '2025-12-01', '健康状况良好', '建议定期体检', '维生素片 1盒');
 
 -- 插入药品库存信息
-INSERT INTO drug_inventory (drug_name, description, quantity, unit_price, supplier, expiration_date) VALUES
-('阿莫西林胶囊', '抗生素类药物', 100, 25.00, '北京制药有限公司', '2026-12-31'),
-('维生素C片', '营养补充剂', 200, 15.00, '上海药业集团', '2027-06-30'),
-('止痛药', '缓解疼痛', 50, 30.00, '广州医药公司', '2026-08-15');
+INSERT INTO drug_inventory (code, name, type, price, stock, warning_stock, unit, is_active) VALUES
+('D001', '阿莫西林', '抗生素', 25.00, 120, 20, '盒', TRUE),
+('D002', '狂犬疫苗', '疫苗', 80.00, 8, 10, '支', TRUE),
+('D003', '伊丽莎白圈', '耗材', 15.00, 50, 15, '个', TRUE),
+('D004', '体内驱虫片', '驱虫药', 45.00, 15, 20, '粒', FALSE);
 
 -- 插入账单信息
 INSERT INTO billing (user_id, appointment_id, amount, status, payment_method, description) VALUES

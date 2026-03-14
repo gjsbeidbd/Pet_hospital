@@ -11,30 +11,23 @@
         <!-- 费用管理 -->
         <el-tab-pane label="费用管理" name="fee">
           <div class="table-toolbar">
-            <el-button type="primary" @click="addNewPrice" :icon="Plus">
+            <el-button type="primary" @click="showAddFeeDialog">
               + 新增收费项目
             </el-button>
           </div>
           <el-table :data="priceSettings" border style="width: 100%" class="data-table">
             <el-table-column prop="item" label="收费项目" min-width="180" show-overflow-tooltip></el-table-column>
             <el-table-column prop="category" label="费用类别" width="120" show-overflow-tooltip></el-table-column>
-            <el-table-column prop="price" label="当前价格" width="140">
+            <el-table-column prop="price" label="价格" width="100">
               <template #default="scope">
-                <el-input-number 
-                  v-model="scope.row.price" 
-                  :min="0" 
-                  :precision="2" 
-                  :step="1"
-                  size="small"
-                  controls-position="right"
-                  style="width: 120px"
-                />
+                <span style="color: #F56C6C; font-weight: bold;">￥{{ scope.row.price }}</span>
               </template>
             </el-table-column>
-            <el-table-column prop="unit" label="单位" width="100"></el-table-column>
+            <el-table-column prop="unit" label="单位" width="80"></el-table-column>
+            <el-table-column prop="description" label="描述说明" min-width="200" show-overflow-tooltip></el-table-column>
             <el-table-column label="操作" width="180" fixed="right" align="center">
               <template #default="scope">
-                <el-button type="primary" size="small" @click="savePrice(scope.row)">保存</el-button>
+                <el-button type="primary" size="small" @click="showEditFeeDialog(scope.row)">修改</el-button>
                 <el-button type="danger" size="small" @click="deletePrice(scope.row)">删除</el-button>
               </template>
             </el-table-column>
@@ -44,7 +37,7 @@
         <!-- 宠物种类管理 -->
         <el-tab-pane label="宠物种类管理" name="pet-type">
           <div class="table-toolbar">
-            <el-button type="primary" @click="showAddPetTypeDialog" :icon="Plus">
+            <el-button type="primary" @click="showAddPetTypeDialog">
               + 新增宠物种类
             </el-button>
           </div>
@@ -86,7 +79,7 @@
             </el-table-column>
             <el-table-column label="操作" width="220" fixed="right" align="center">
               <template #default="scope">
-                <el-button type="primary" size="small" @click="savePetType(scope.row)">保存</el-button>
+                <el-button type="primary" size="small" @click="showEditPetTypeDialog(scope.row)">修改</el-button>
                 <el-button 
                   :type="scope.row.status ? 'warning' : 'success'" 
                   size="small" 
@@ -180,38 +173,163 @@
         </el-tab-pane>
       </el-tabs>
     </el-card>
+
+    <!-- 新增/编辑费用项目对话框 -->
+    <el-dialog 
+      v-model="feeDialogVisible" 
+      :title="isEditMode ? '修改收费项目' : '新增收费项目'" 
+      width="500px"
+      @close="resetFeeForm"
+    >
+      <el-form :model="feeForm" label-width="100px" :rules="feeRules" ref="feeFormRef">
+        <el-form-item label="收费项目" prop="itemName">
+          <el-input v-model="feeForm.itemName" placeholder="请输入收费项目名称" maxlength="100"></el-input>
+        </el-form-item>
+        <el-form-item label="费用类别" prop="category">
+          <el-select v-model="feeForm.category" placeholder="请选择费用类别" style="width: 100%">
+            <el-option label="诊查费" value="诊查费"></el-option>
+            <el-option label="治疗费" value="治疗费"></el-option>
+            <el-option label="手术费" value="手术费"></el-option>
+            <el-option label="检查费" value="检查费"></el-option>
+            <el-option label="护理费" value="护理费"></el-option>
+            <el-option label="其他" value="其他"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="价格" prop="unitPrice">
+          <el-input-number 
+            v-model="feeForm.unitPrice" 
+            :min="0" 
+            :precision="2" 
+            :step="1"
+            controls-position="right"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="单位" prop="unit">
+          <el-input v-model="feeForm.unit" placeholder="如：次、支、台等" maxlength="20"></el-input>
+        </el-form-item>
+        <el-form-item label="描述说明" prop="description">
+          <el-input 
+            v-model="feeForm.description" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="请输入费用说明"
+            maxlength="500"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="feeDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitFeeForm" :loading="submitting">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 新增/编辑宠物种类对话框 -->
+    <el-dialog 
+      v-model="petTypeDialogVisible" 
+      :title="isPetTypeEditMode ? '修改宠物种类' : '新增宠物种类'" 
+      width="500px"
+      @close="resetPetTypeForm"
+    >
+      <el-form :model="petTypeForm" label-width="100px" :rules="petTypeRules" ref="petTypeFormRef">
+        <el-form-item label="宠物种类" prop="speciesName">
+          <el-input v-model="petTypeForm.speciesName" placeholder="请输入宠物种类名称" maxlength="50"></el-input>
+        </el-form-item>
+        <el-form-item label="描述说明" prop="description">
+          <el-input 
+            v-model="petTypeForm.description" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="请输入种类描述"
+            maxlength="500"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="petTypeDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitPetTypeForm" :loading="petTypeSubmitting">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, CircleCheckFilled, RefreshLeft } from '@element-plus/icons-vue';
+import { 
+  getFeeItems, 
+  addFeeItem, 
+  updateFeeItem, 
+  deleteFeeItem,
+  getPetSpecies,
+  addPetSpecies,
+  updatePetSpecies,
+  deletePetSpecies,
+  getPetBreedsBySpeciesId,
+  addPetBreed
+} from '@/services/api';
 
 // 当前激活的选项卡
 const activeTab = ref('fee');
 
 // 费用管理数据
-const priceSettings = ref([
-  { item: '普通挂号费', category: '诊疗费', price: 20, unit: '次' },
-  { item: '专家挂号费', category: '诊疗费', price: 50, unit: '次' },
-  { item: '住院护理费', category: '住院费', price: 100, unit: '天' },
-  { item: '绝育手术基础费', category: '手术费', price: 600, unit: '次' },
-  { item: '疫苗接种费', category: '防疫费', price: 80, unit: '针' },
-  { item: '血常规检查', category: '检查费', price: 120, unit: '次' },
-  { item: 'X 光检查', category: '检查费', price: 200, unit: '次' },
-  { item: 'B 超检查', category: '检查费', price: 150, unit: '次' },
-]);
+const priceSettings = ref([]);
+const loadingFeeItems = ref(false);
+
+// 费用表单相关
+const feeDialogVisible = ref(false);
+const isEditMode = ref(false);
+const submitting = ref(false);
+const feeFormRef = ref(null);
+const feeForm = reactive({
+  id: null,
+  itemName: '',
+  category: '',
+  unitPrice: 0,
+  unit: '',
+  description: ''
+});
+
+// 表单验证规则
+const feeRules = {
+  itemName: [
+    { required: true, message: '请输入收费项目名称', trigger: 'blur' },
+    { min: 2, max: 100, message: '长度在 2 到 100 个字符', trigger: 'blur' }
+  ],
+  category: [
+    { required: true, message: '请选择费用类别', trigger: 'change' }
+  ],
+  unitPrice: [
+    { required: true, message: '请输入价格', trigger: 'blur' }
+  ],
+  unit: [
+    { required: true, message: '请输入单位', trigger: 'blur' }
+  ]
+};
 
 // 宠物种类数据
-const petTypes = ref([
-  { typeName: '猫', breeds: ['英短', '美短', '布偶', '暹罗', '波斯', '金吉拉'], description: '包括各种品种的猫', status: true },
-  { typeName: '狗', breeds: ['泰迪', '比熊', '金毛', '拉布拉多', '哈士奇', '萨摩耶', '边境牧羊犬'], description: '包括各种品种的狗', status: true },
-  { typeName: '兔', breeds: ['垂耳兔', '侏儒兔', '安哥拉兔', '荷兰猪'], description: '包括各种品种的兔子', status: true },
-  { typeName: '仓鼠', breeds: ['金丝熊', '三线仓鼠', '一线仓鼠', '公婆仓鼠'], description: '包括仓鼠、金丝熊等小型啮齿类', status: true },
-  { typeName: '鸟', breeds: ['鹦鹉', '文鸟', '珍珠鸟', '虎皮鹦鹉'], description: '包括鹦鹉、文鸟等观赏鸟类', status: true },
-  { typeName: '异宠', breeds: ['龙猫', '雪貂', '刺猬', '守宫'], description: '包括龙猫、雪貂等特殊宠物', status: false },
-]);
+const petTypes = ref([]);
+const loadingPetTypes = ref(false);
+
+// 宠物种类表单相关
+const petTypeDialogVisible = ref(false);
+const isPetTypeEditMode = ref(false);
+const petTypeSubmitting = ref(false);
+const petTypeFormRef = ref(null);
+const petTypeForm = reactive({
+  id: null,
+  speciesName: '',
+  description: ''
+});
+
+// 宠物种类表单验证规则
+const petTypeRules = {
+  speciesName: [
+    { required: true, message: '请输入宠物种类名称', trigger: 'blur' },
+    { min: 1, max: 50, message: '长度在 1 到 50 个字符', trigger: 'blur' }
+  ]
+};
 
 // 公告表单
 const announcementForm = reactive({
@@ -228,99 +346,271 @@ const announcements = ref([
   { id: 4, title: '春节期间门诊安排', type: 'important', publishDate: '2026-02-01', content: '春节期间门诊时间安排如下...' },
 ]);
 
-// 费用管理方法
+// 加载费用项目
+const loadFeeItems = async () => {
+  try {
+    loadingFeeItems.value = true;
+    const response = await getFeeItems();
+    // 将后端数据转换为前端格式
+    priceSettings.value = response.data.map(item => ({
+      id: item.id,
+      item: item.itemName,
+      category: item.category,
+      price: item.unitPrice,
+      unit: item.unit || '次',
+      description: item.description,
+      isActive: item.isActive
+    }));
+  } catch (error) {
+    console.error('加载费用项目失败:', error);
+    ElMessage.error('加载费用项目失败，请检查后端服务');
+  } finally {
+    loadingFeeItems.value = false;
+  }
+};
+
+// 加载宠物种类
+const loadPetTypes = async () => {
+  try {
+    loadingPetTypes.value = true;
+    const response = await getPetSpecies();
+    // 获取每个种类下的品种
+    const typesWithBreeds = await Promise.all(
+      response.data.map(async (species) => {
+        try {
+          const breedsResponse = await getPetBreedsBySpeciesId(species.id);
+          return {
+            id: species.id,
+            typeName: species.speciesName,
+            breeds: breedsResponse.data.map(breed => breed.breedName),
+            description: species.description,
+            status: species.isActive
+          };
+        } catch (error) {
+          console.error(`加载种类 ${species.speciesName} 的品种失败:`, error);
+          return {
+            id: species.id,
+            typeName: species.speciesName,
+            breeds: [],
+            description: species.description,
+            status: species.isActive
+          };
+        }
+      })
+    );
+    petTypes.value = typesWithBreeds;
+  } catch (error) {
+    console.error('加载宠物种类失败:', error);
+    ElMessage.error('加载宠物种类失败，请检查后端服务');
+  } finally {
+    loadingPetTypes.value = false;
+  }
+};
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadFeeItems();
+  loadPetTypes();
+});
+
+// 显示新增费用对话框
+const showAddFeeDialog = () => {
+  isEditMode.value = false;
+  feeDialogVisible.value = true;
+};
+
+// 显示编辑费用对话框
+const showEditFeeDialog = (row) => {
+  isEditMode.value = true;
+  feeForm.id = row.id;
+  feeForm.itemName = row.item;
+  feeForm.category = row.category;
+  feeForm.unitPrice = row.price;
+  feeForm.unit = row.unit;
+  feeForm.description = row.description || '';
+  feeDialogVisible.value = true;
+};
+
+// 重置表单
+const resetFeeForm = () => {
+  if (feeFormRef.value) {
+    feeFormRef.value.resetFields();
+  }
+  feeForm.id = null;
+  feeForm.itemName = '';
+  feeForm.category = '';
+  feeForm.unitPrice = 0;
+  feeForm.unit = '';
+  feeForm.description = '';
+};
+
+// 提交表单
+const submitFeeForm = async () => {
+  if (!feeFormRef.value) return;
+  
+  await feeFormRef.value.validate(async (valid) => {
+    if (!valid) return;
+    
+    try {
+      submitting.value = true;
+      const formData = {
+        itemName: feeForm.itemName,
+        category: feeForm.category,
+        unitPrice: feeForm.unitPrice,
+        unit: feeForm.unit,
+        description: feeForm.description
+      };
+      
+      if (isEditMode.value) {
+        // 修改
+        await updateFeeItem(feeForm.id, formData);
+        ElMessage.success('修改成功');
+      } else {
+        // 新增
+        await addFeeItem(formData);
+        ElMessage.success('添加成功');
+      }
+      
+      feeDialogVisible.value = false;
+      await loadFeeItems(); // 重新加载数据
+    } catch (error) {
+      console.error('操作失败:', error);
+      ElMessage.error(isEditMode.value ? '修改失败' : '添加失败');
+    } finally {
+      submitting.value = false;
+    }
+  });
+};
+
+// 删除费用项目
 const savePrice = (row) => {
   console.log('保存费用:', row);
   ElMessage.success(`"${row.item}"价格已更新为 ${row.price}元/${row.unit}`);
 };
 
-const deletePrice = (row) => {
-  ElMessageBox.confirm(
-    `确定要删除收费项目"${row.item}"吗？`,
-    '警告',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    const index = priceSettings.value.findIndex(item => item.item === row.item);
-    if (index !== -1) {
-      priceSettings.value.splice(index, 1);
-      ElMessage.success('删除成功');
-    }
-  }).catch(() => {});
-};
-
-const addNewPrice = () => {
-  ElMessageBox.prompt('请输入新收费项目名称', '新增收费项目', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    inputPattern: /.+/,
-    inputErrorMessage: '请输入项目名称'
-  }).then(({ value }) => {
-    priceSettings.value.push({
-      item: value,
-      category: '其他',
-      price: 0,
-      unit: '次'
-    });
-    ElMessage.success('添加成功');
-  }).catch(() => {});
-};
-
-// 宠物种类管理方法
-const savePetType = (row) => {
-  console.log('保存宠物种类:', row);
-  ElMessage.success(`"${row.typeName}"信息已保存`);
-};
-
-const togglePetTypeStatus = (row) => {
-  row.status = !row.status;
-  ElMessage.success(`已${row.status ? '启用' : '禁用'}"${row.typeName}"`);
-};
-
-const deletePetType = (row) => {
-  ElMessageBox.confirm(
-    `确定要删除宠物种类"${row.typeName}"吗？`,
-    '警告',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    const index = petTypes.value.findIndex(item => item.typeName === row.typeName);
-    if (index !== -1) {
-      petTypes.value.splice(index, 1);
-      ElMessage.success('删除成功');
-    }
-  }).catch(() => {});
-};
-
-// 添加新的宠物种类对话框
-const showAddPetTypeDialog = () => {
-  ElMessageBox.prompt('请输入新宠物种类名称', '新增宠物种类', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    inputPattern: /.+/,
-    inputErrorMessage: '请输入种类名称'
-  }).then(({ value }) => {
-    // 检查是否已存在
-    const exists = petTypes.value.some(item => item.typeName === value);
-    if (exists) {
-      ElMessage.warning('该宠物种类已存在');
-      return;
-    }
+const deletePrice = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除收费项目"${row.item}"吗？`,
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    );
     
-    petTypes.value.push({
-      typeName: value,
-      breeds: [],
-      description: '',
-      status: true
+    await deleteFeeItem(row.id);
+    ElMessage.success('删除成功');
+    await loadFeeItems(); // 重新加载数据
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error);
+      ElMessage.error('删除失败');
+    }
+  }
+};
+
+
+// 显示新增宠物种类对话框
+const showAddPetTypeDialog = () => {
+  isPetTypeEditMode.value = false;
+  petTypeDialogVisible.value = true;
+};
+
+// 显示编辑宠物种类对话框
+const showEditPetTypeDialog = (row) => {
+  isPetTypeEditMode.value = true;
+  petTypeForm.id = row.id;
+  petTypeForm.speciesName = row.typeName;
+  petTypeForm.description = row.description || '';
+  petTypeDialogVisible.value = true;
+};
+
+// 重置宠物种类表单
+const resetPetTypeForm = () => {
+  if (petTypeFormRef.value) {
+    petTypeFormRef.value.resetFields();
+  }
+  petTypeForm.id = null;
+  petTypeForm.speciesName = '';
+  petTypeForm.description = '';
+};
+
+// 提交宠物种类表单
+const submitPetTypeForm = async () => {
+  if (!petTypeFormRef.value) return;
+  
+  await petTypeFormRef.value.validate(async (valid) => {
+    if (!valid) return;
+    
+    try {
+      petTypeSubmitting.value = true;
+      const formData = {
+        speciesName: petTypeForm.speciesName,
+        description: petTypeForm.description
+      };
+      
+      if (isPetTypeEditMode.value) {
+        // 修改
+        await updatePetSpecies(petTypeForm.id, formData);
+        ElMessage.success('修改成功');
+      } else {
+        // 新增
+        await addPetSpecies(formData);
+        ElMessage.success('添加成功');
+      }
+      
+      petTypeDialogVisible.value = false;
+      await loadPetTypes(); // 重新加载数据
+    } catch (error) {
+      console.error('操作失败:', error);
+      ElMessage.error(isPetTypeEditMode.value ? '修改失败' : '添加失败');
+    } finally {
+      petTypeSubmitting.value = false;
+    }
+  });
+};
+
+// 切换宠物种类状态
+const togglePetTypeStatus = async (row) => {
+  try {
+    const newStatus = !row.status;
+    await updatePetSpecies(row.id, {
+      speciesName: row.typeName,
+      description: row.description,
+      isActive: newStatus
     });
-    ElMessage.success('添加成功，您可以继续添加该种类的常见品种');
-  }).catch(() => {});
+    row.status = newStatus;
+    ElMessage.success(`已${newStatus ? '启用' : '禁用'}"${row.typeName}"`);
+  } catch (error) {
+    console.error('更新状态失败:', error);
+    ElMessage.error('更新状态失败');
+  }
+};
+
+// 删除宠物种类
+const deletePetType = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除宠物种类"${row.typeName}"吗？`,
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    );
+    
+    await deletePetSpecies(row.id);
+    ElMessage.success('删除成功');
+    await loadPetTypes(); // 重新加载数据
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error);
+      ElMessage.error('删除失败');
+    }
+  }
 };
 
 // 显示添加品种对话框

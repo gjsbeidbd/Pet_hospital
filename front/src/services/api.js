@@ -133,6 +133,92 @@ export const applyScheduleToPeriod = (data) => {
   return api.post('/api/schedules/apply-to-period', data);
 };
 
+// ==================== 费用管理相关 ====================
+
+// 获取所有收费项目
+export const getFeeItems = () => {
+  return api.get('/api/fee-items');
+};
+
+// 新增收费项目
+export const addFeeItem = (feeData) => {
+  return api.post('/api/fee-items', feeData);
+};
+
+// 更新收费项目
+export const updateFeeItem = (feeId, feeData) => {
+  return api.put(`/api/fee-items/${feeId}`, feeData);
+};
+
+// 删除收费项目
+export const deleteFeeItem = (feeId) => {
+  return api.delete(`/api/fee-items/${feeId}`);
+};
+
+// ==================== 宠物种类管理相关 ====================
+
+// 获取所有宠物种类
+export const getPetSpecies = () => {
+  return api.get('/api/pet-species');
+};
+
+// 新增宠物种类
+export const addPetSpecies = (speciesData) => {
+  return api.post('/api/pet-species', speciesData);
+};
+
+// 更新宠物种类
+export const updatePetSpecies = (speciesId, speciesData) => {
+  return api.put(`/api/pet-species/${speciesId}`, speciesData);
+};
+
+// 删除宠物种类
+export const deletePetSpecies = (speciesId) => {
+  return api.delete(`/api/pet-species/${speciesId}`);
+};
+
+// 获取某个种类下的所有品种
+export const getPetBreedsBySpeciesId = (speciesId) => {
+  return api.get(`/api/pet-breeds?speciesId=${speciesId}`);
+};
+
+// 新增宠物品种
+export const addPetBreed = (breedData) => {
+  return api.post('/api/pet-breeds', breedData);
+};
+
+// 更新宠物品种
+export const updatePetBreed = (breedId, breedData) => {
+  return api.put(`/api/pet-breeds/${breedId}`, breedData);
+};
+
+// 删除宠物品种
+export const deletePetBreed = (breedId) => {
+  return api.delete(`/api/pet-breeds/${breedId}`);
+};
+
+// ==================== 药品库存管理相关 ====================
+
+// 获取所有药品
+export const getDrugInventory = () => {
+  return api.get('/api/drug-inventory');
+};
+
+// 新增药品
+export const addDrug = (drugData) => {
+  return api.post('/api/drug-inventory', drugData);
+};
+
+// 更新药品
+export const updateDrug = (drugId, drugData) => {
+  return api.put(`/api/drug-inventory/${drugId}`, drugData);
+};
+
+// 删除药品
+export const deleteDrug = (drugId) => {
+  return api.delete(`/api/drug-inventory/${drugId}`);
+};
+
 
 
 export default api;

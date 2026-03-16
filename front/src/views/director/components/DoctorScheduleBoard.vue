@@ -2,799 +2,523 @@
   <div class="schedule-page">
     <el-card shadow="never" class="top-card">
       <div class="top-row">
-        <div class="left-actions">
-          <el-select
-            v-model="selectedDepartment"
-            placeholder="选择科室"
-            size="default"
-            style="width: 150px"
-            @change="updateScheduleData"
-            clearable
-          >
-            <el-option v-for="dept in departments" :key="dept" :label="dept" :value="dept" />
-          </el-select>
-
-          <!-- 视图切换 -->
-          <el-radio-group v-model="viewType" size="default" @change="onViewTypeChange">
-            <el-radio-button label="周视图" value="week" />
-            <el-radio-button label="月视图" value="month" />
-          </el-radio-group>
-
-          <!-- 日期选择器 -->
+        <div class="actions">
           <el-date-picker
-            v-if="viewType === 'week'"
-            v-model="selectedDate"
-            type="date"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            placeholder="选择日期"
-            size="default"
-            @change="updateScheduleData"
-          />
-          <el-date-picker
-            v-else
             v-model="selectedMonth"
             type="month"
             format="YYYY-MM"
             value-format="YYYY-MM"
             placeholder="选择月份"
             size="default"
-            @change="updateScheduleData"
+            @change="onMonthChange"
           />
+
+          <el-button type="primary" @click="autoSchedule" :loading="isAutoScheduling">
+            <el-icon><MagicStick /></el-icon>
+            一键排班（全科室）
+          </el-button>
         </div>
 
-        <div class="right-actions">
-          <el-button size="default" @click="openApplyDialog">排班复用</el-button>
-          <el-button size="default" @click="exportSchedule">导出</el-button>
+        <div class="filter-area">
+          <el-select 
+            v-model="selectedDepartment" 
+            placeholder="筛选科室" 
+            style="width: 180px"
+            clearable
+            @change="onDepartmentChange"
+          >
+            <el-option
+              v-for="dept in departments"
+              :key="dept"
+              :label="dept"
+              :value="dept"
+            />
+          </el-select>
         </div>
       </div>
 
       <div class="meta-row">
-        <span class="range">{{ formatDateRange() }}</span>
-        <span class="hint">当前科室：{{ selectedDepartment || '未选择' }}（点击格子可排班）</span>
+        <span class="range">{{ formatMonthRange() }}</span>
+        <span class="hint">（显示全部科室排班，可筛选查看）</span>
       </div>
     </el-card>
 
-    <el-card shadow="never" class="board-card">
+    <el-card shadow="never" class="board-card" v-loading="isLoading">
       <div class="legend">
-        <span class="legend-item"><i class="dot morning"></i>白班</span>
-        <span class="legend-item"><i class="dot afternoon"></i>中班</span>
-        <span class="legend-item"><i class="dot night"></i>夜班</span>
+        <span class="legend-item"><i class="dot morning"></i>白班 (08:00-17:00)</span>
         <span class="legend-item"><i class="dot rest"></i>休息</span>
       </div>
 
-      <!-- 周视图 -->
-      <div v-if="viewType === 'week'" class="table-wrap">
-        <div class="header-row">
-          <div class="shift-cell">班次</div>
-          <div v-for="day in weekdays" :key="day.key" class="day-cell">
-            <div>{{ day.label }}</div>
-            <small>{{ day.date }}</small>
+      <div class="schedule-list" v-if="filteredDepartments.length > 0">
+        <div v-for="dept in filteredDepartments" :key="dept" class="dept-section">
+          <div class="dept-header">
+            <span class="dept-title">{{ dept }}</span>
+            <span class="dept-doctors">医生：{{ getDoctorsByDept(dept).map(d => d.name).join('、') || '暂无' }}</span>
           </div>
-        </div>
+          
+          <div class="table-wrap">
+            <div class="header-row">
+              <div class="shift-cell">日期</div>
+              <div v-for="day in monthDays" :key="day.date" class="day-cell" :class="{ 'weekend': day.isWeekend }">
+                <div>{{ day.label }}</div>
+                <small>{{ day.dateNum }}</small>
+              </div>
+            </div>
 
-        <div v-for="row in scheduleData" :key="row.time" class="data-row" :class="getShiftClass(row.time)">
-          <div class="shift-cell">{{ row.time }}</div>
-          <div
-            v-for="day in weekdays"
-            :key="day.key"
-            class="edit-cell"
-            @click="editScheduleCell(day.key, row)"
-          >
-            <template v-if="row[day.key] === '休息'">
-              <el-tag size="small" type="info">休息</el-tag>
-            </template>
-            <template v-else-if="row[day.key]">
-              {{ getStaffName(row[day.key]) }}
-            </template>
-            <template v-else>
-              <span class="empty">+ 添加</span>
-            </template>
+            <div v-for="shift in SHIFT_NAMES" :key="shift" class="data-row" :class="getShiftClass(shift)">
+              <div class="shift-cell">姓名</div>
+              <div
+                v-for="day in monthDays"
+                :key="day.date"
+                class="edit-cell"
+                :class="{ 'weekend': day.isWeekend }"
+              >
+                <template v-if="getScheduleValue(dept, shift, day.date) === '休息'">
+                  <el-tag size="small" type="info">休息</el-tag>
+                </template>
+                <template v-else-if="getScheduleValue(dept, shift, day.date)">
+                  <span class="doctor-name">{{ getDoctorName(getScheduleValue(dept, shift, day.date)) }}</span>
+                </template>
+                <template v-else>
+                  <span class="empty">-</span>
+                </template>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 月视图 -->
-      <div v-else class="month-table-wrap">
-        <div class="month-header-row">
-          <div class="shift-cell">班次</div>
-          <div v-for="day in monthDays" :key="day.key" class="month-day-cell">
-            <div class="day-number">{{ day.day }}</div>
-            <div class="day-label">{{ day.label }}</div>
-          </div>
-        </div>
-
-        <div v-for="row in scheduleData" :key="row.time" class="month-data-row" :class="getShiftClass(row.time)">
-          <div class="shift-cell">{{ row.time }}</div>
-          <div
-            v-for="day in monthDays"
-            :key="day.key"
-            class="month-edit-cell"
-            :class="{ 'is-today': day.isToday }"
-            @click="editScheduleCell(day.key, row)"
-          >
-            <template v-if="row[day.key] === '休息'">
-              <el-tag size="small" type="info">休息</el-tag>
-            </template>
-            <template v-else-if="row[day.key]">
-              <span class="staff-name">{{ getStaffName(row[day.key]) }}</span>
-            </template>
-            <template v-else>
-              <span class="empty">+</span>
-            </template>
-          </div>
-        </div>
-      </div>
+      <el-empty v-else description="暂无排班数据" />
     </el-card>
 
-    <!-- 排班复用对话框 -->
-    <el-dialog v-model="applyDialogVisible" title="排班复用" width="500px">
-      <el-form :model="applyForm" label-width="120px">
-        <el-alert
-          title="说明"
-          type="info"
-          :closable="false"
-          style="margin-bottom: 16px;"
-        >
-          将当前周的排班计划应用到指定周期范围
-        </el-alert>
-        
-        <el-form-item label="应用周期">
-          <el-radio-group v-model="applyForm.periodType">
-            <el-radio label="month">按月</el-radio>
-            <el-radio label="quarter">按季度</el-radio>
-            <el-radio label="custom">自定义</el-radio>
-          </el-radio-group>
+    <!-- 一键排班确认弹窗 -->
+    <el-dialog v-model="autoScheduleDialogVisible" title="一键排班（全科室）" width="600px">
+      <el-alert
+        title="将为所有科室自动生成当月排班"
+        description="系统将按照轮班规则为每个科室的医生自动分配班次"
+        type="info"
+        :closable="false"
+        style="margin-bottom: 20px"
+      />
+      <el-form label-width="100px">
+        <el-form-item label="排班月份">
+          <span>{{ selectedMonth }}</span>
         </el-form-item>
-        
-        <el-form-item label="应用时长" v-if="applyForm.periodType !== 'custom'">
-          <el-input-number v-model="applyForm.duration" :min="1" :max="12" />
-          <span style="margin-left: 8px;">{{ applyForm.periodType === 'month' ? '个月' : '个季度' }}</span>
+        <el-form-item label="科室数量">
+          <span>{{ departments.length }} 个</span>
         </el-form-item>
-        
-        <el-form-item label="起始日期" v-if="applyForm.periodType === 'custom'">
-          <el-date-picker
-            v-model="applyForm.startDate"
-            type="date"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            placeholder="选择开始日期"
-            style="width: 100%;"
-          />
+        <el-form-item label="医生总数">
+          <span>{{ allDoctors.length }} 人</span>
         </el-form-item>
-        
-        <el-form-item label="结束日期" v-if="applyForm.periodType === 'custom'">
-          <el-date-picker
-            v-model="applyForm.endDate"
-            type="date"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            placeholder="选择结束日期"
-            style="width: 100%;"
-          />
+        <el-form-item label="排班天数">
+          <span>{{ monthDays.length }} 天</span>
         </el-form-item>
-        
-        <el-form-item label="排除日期">
-          <el-select
-            v-model="applyForm.excludeDates"
-            multiple
-            allow-create
-            filterable
-            placeholder="选择需要排除的日期（如节假日）"
-            style="width: 100%;"
-          >
-            <el-option
-              v-for="day in weekdays"
-              :key="day.fullDate"
-              :label="`${day.label} (${day.date})`"
-              :value="day.fullDate"
-            />
-          </el-select>
-          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
-            可输入需要排除的特殊日期，这些日期不会应用排班
+      </el-form>
+      <div class="preview-area">
+        <div class="preview-title">科室预览：</div>
+        <el-scrollbar max-height="200px">
+          <div v-for="dept in departments" :key="dept" class="preview-dept">
+            <div class="dept-name">{{ dept }}</div>
+            <div class="dept-doctors">
+              医生：{{ getDoctorsByDept(dept).map(d => d.name).join('、') || '暂无' }}
+            </div>
           </div>
-        </el-form-item>
-      </el-form>
-      
+        </el-scrollbar>
+      </div>
       <template #footer>
-        <el-button @click="applyDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmApplySchedule" :loading="applyLoading">
-          确定应用
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="cellDialogVisible" title="编辑排班" width="420px">
-      <el-form label-width="90px">
-        <el-form-item label="科室">
-          <span>{{ selectedDepartment || '-' }}</span>
-        </el-form-item>
-        <el-form-item label="班次">
-          <span>{{ editingShiftName || '-' }}</span>
-        </el-form-item>
-        <el-form-item label="值班医生">
-          <el-select v-model="selectedCellStaffId" placeholder="请选择医生" style="width: 100%">
-            <el-option label="休息" value="休息" />
-            <el-option
-              v-for="staff in doctorsInSelectedDept"
-              :key="staff.id"
-              :label="`${staff.name}（${staff.department}）`"
-              :value="staff.id"
-            />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="cellDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmCellSchedule">确定</el-button>
+        <el-button @click="autoScheduleDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmAutoSchedule" :loading="isAutoScheduling">确认排班</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { getDoctorSchedules, saveDoctorSchedulesBatch, getAllStaff } from '@/services/api'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { MagicStick } from '@element-plus/icons-vue'
+import { getDoctorSchedules, getAllDoctorSchedules, saveDoctorSchedulesBatch, getAllDoctors } from '@/services/api'
 
-const selectedDate = ref(new Date())
+const selectedMonth = ref('')
 const selectedDepartment = ref('')
-const viewType = ref('week') // 'week' 或 'month'
-const selectedMonth = ref(new Date().toISOString().slice(0, 7)) // YYYY-MM
-const weekdays = ref([])
 const monthDays = ref([])
-const scheduleData = ref([])
 const allDoctors = ref([])
+const scheduleMap = ref({})
+const isLoading = ref(false)
+const isAutoScheduling = ref(false)
 
-const cellDialogVisible = ref(false)
-const applyDialogVisible = ref(false)
-const applyLoading = ref(false)
-const editingRowRef = ref(null)
-const editingDayKey = ref(null)
-const editingShiftName = ref(null)
-const selectedCellStaffId = ref('')
+const autoScheduleDialogVisible = ref(false)
 
-const applyForm = reactive({
-  periodType: 'month', // month, quarter, custom
-  duration: 1,
-  startDate: '',
-  endDate: '',
-  excludeDates: []
-})
-
-const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-const DAY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-const SHIFT_NAMES = ['白班', '中班', '夜班']
-
-const createEmptyRows = () => SHIFT_NAMES.map(name => ({
-  time: name,
-  monday: '',
-  tuesday: '',
-  wednesday: '',
-  thursday: '',
-  friday: '',
-  saturday: '',
-  sunday: ''
-}))
+const SHIFT_NAMES = ['白班']
 
 const departments = computed(() => {
   const set = new Set()
   allDoctors.value.forEach(item => item.department && set.add(item.department))
-  return Array.from(set)
+  return Array.from(set).sort()
 })
 
-const doctorsInSelectedDept = computed(() => {
-  if (!selectedDepartment.value) return []
-  return allDoctors.value.filter(item => item.department === selectedDepartment.value)
+const filteredDepartments = computed(() => {
+  if (!selectedDepartment.value) {
+    return departments.value
+  }
+  return departments.value.filter(d => d === selectedDepartment.value)
 })
 
-const getWeekDates = (dateValue) => {
-  const date = new Date(dateValue)
-  const weekday = date.getDay() === 0 ? 7 : date.getDay()
-  const monday = new Date(date)
-  monday.setDate(date.getDate() - weekday + 1)
-
-  return DAY_KEYS.map((key, idx) => {
-    const d = new Date(monday)
-    d.setDate(monday.getDate() + idx)
-    const m = d.getMonth() + 1
-    const day = d.getDate()
-    return {
-      key,
-      label: DAY_LABELS[idx],
-      date: `${m}/${day}`,
-      fullDate: d.toISOString().split('T')[0]
-    }
-  })
+const getDoctorsByDept = (dept) => {
+  return allDoctors.value.filter(item => item.department === dept)
 }
 
 const getMonthDays = (monthStr) => {
   if (!monthStr) return []
   const [year, month] = monthStr.split('-').map(Number)
-  const firstDay = new Date(year, month - 1, 1)
-  const lastDay = new Date(year, month, 0)
-  const daysInMonth = lastDay.getDate()
-  const startWeekday = firstDay.getDay() === 0 ? 7 : firstDay.getDay()
-  
   const days = []
-  const today = new Date().toISOString().split('T')[0]
+  const daysInMonth = new Date(year, month, 0).getDate()
   
-  // 添加上月补齐的天数
-  for (let i = 1; i < startWeekday; i++) {
-    days.push({ key: `prev-${i}`, day: '', label: '' })
-  }
-  
-  // 添加当月的天数
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(year, month - 1, day)
-    const weekday = date.getDay() === 0 ? 7 : date.getDay()
-    const dateStr = date.toISOString().split('T')[0]
+  for (let i = 1; i <= daysInMonth; i++) {
+    const date = new Date(year, month - 1, i)
+    const dayOfWeek = date.getDay()
+    const weekDays = ['日', '一', '二', '三', '四', '五', '六']
     days.push({
-      key: dateStr,
-      day: day.toString(),
-      label: DAY_LABELS[weekday - 1],
-      fullDate: dateStr,
-      isToday: dateStr === today
+      date: `${year}-${String(month).padStart(2, '0')}-${String(i).padStart(2, '0')}`,
+      dateNum: i,
+      label: `周${weekDays[dayOfWeek]}`,
+      isWeekend: dayOfWeek === 0 || dayOfWeek === 6
     })
   }
-  
   return days
 }
 
-const formatDateRange = () => {
-  if (viewType.value === 'month') {
-    if (!selectedMonth.value) return ''
-    const [year, month] = selectedMonth.value.split('-')
-    return `${year}年${parseInt(month)}月`
-  }
-  if (!weekdays.value.length) return ''
-  return `${weekdays.value[0].date} 至 ${weekdays.value[6].date}`
+const CHINESE_MONTHS = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二']
+
+const formatMonthRange = () => {
+  if (!selectedMonth.value) return ''
+  const month = parseInt(selectedMonth.value.split('-')[1])
+  const year = selectedMonth.value.split('-')[0]
+  return `${year}年${CHINESE_MONTHS[month - 1]}月排班`
 }
 
 const getShiftClass = (shiftName) => {
   if (shiftName.includes('白班')) return 'shift-morning'
-  if (shiftName.includes('中班')) return 'shift-afternoon'
-  if (shiftName.includes('夜班')) return 'shift-night'
   return ''
 }
 
-const getStaffName = (id) => {
-  if (!id || id === '休息') return '休息'
-  const target = allDoctors.value.find(item => item.id === id)
+const getShiftStartTime = (shiftName) => {
+  if (shiftName === '白班') return '08:00:00'
+  return '08:00:00'
+}
+
+const getShiftEndTime = (shiftName) => {
+  if (shiftName === '白班') return '17:00:00'
+  return '17:00:00'
+}
+
+const getDoctorName = (id) => {
+  if (!id || id === '休息') return ''
+  const target = allDoctors.value.find(item => item.id.toString() === id.toString())
   return target ? target.name : id
+}
+
+const getScheduleKey = (dept, shift, date) => {
+  return `${dept}_${shift}_${date}`
+}
+
+const getScheduleValue = (dept, shift, date) => {
+  const key = getScheduleKey(dept, shift, date)
+  return scheduleMap.value[key] || ''
 }
 
 const fetchAllDoctors = async () => {
   try {
-    console.log('开始获取医生列表...')
-    // 获取员工列表
-    const staffRes = await getAllStaff()
-    console.log('获取到的员工数据:', staffRes.data)
-    
-    if (!Array.isArray(staffRes.data)) {
-      console.error('员工数据不是数组:', staffRes.data)
-      return
-    }
-    
-    // 过滤出医生
-    allDoctors.value = staffRes.data.filter(item => item.role === '医生')
-    console.log('过滤后的医生列表:', allDoctors.value)
-    
-    // 自动选择第一个科室（从医生数据中获取）
-    if (allDoctors.value.length > 0 && !selectedDepartment.value) {
-      const availableDepts = departments.value
-      if (availableDepts.length > 0) {
-        selectedDepartment.value = availableDepts[0]
-        console.log('自动选择科室:', availableDepts[0])
-      }
+    const res = await getAllDoctors()
+    if (res.data && Array.isArray(res.data)) {
+      allDoctors.value = res.data
     }
   } catch (error) {
-    console.error('获取医生列表失败详情:', error)
-    ElMessage.error('获取医生列表失败：' + (error.message || '未知错误'))
+    console.error('获取医生列表失败:', error)
+    ElMessage.error('获取医生列表失败')
   }
 }
 
-const updateScheduleData = async () => {
-  if (viewType.value === 'week') {
-    weekdays.value = getWeekDates(selectedDate.value)
-  } else {
-    monthDays.value = getMonthDays(selectedMonth.value)
-  }
-  
-  const rows = createEmptyRows()
+const fetchScheduleData = async () => {
+  if (!selectedMonth.value || monthDays.value.length === 0) return
 
-  if (!selectedDepartment.value) {
-    scheduleData.value = rows
-    return
-  }
+  isLoading.value = true
+  scheduleMap.value = {}
 
   try {
-    let startDate, endDate
-    if (viewType.value === 'week') {
-      startDate = weekdays.value[0].fullDate
-      endDate = weekdays.value[6].fullDate
-    } else {
-      const [year, month] = selectedMonth.value.split('-').map(Number)
-      const firstDay = new Date(year, month - 1, 1)
-      const lastDay = new Date(year, month, 0)
-      startDate = firstDay.toISOString().split('T')[0]
-      endDate = lastDay.toISOString().split('T')[0]
-    }
-    
-    const res = await getDoctorSchedules({
-      startDate,
-      endDate,
-      department: selectedDepartment.value
-    })
+    const startDate = monthDays.value[0].date
+    const endDate = monthDays.value[monthDays.value.length - 1].date
 
-    if (Array.isArray(res.data)) {
-      res.data.forEach(item => {
-        const dayKey = getDayKey(item.scheduleDate)
-        const shiftName = normalizeShiftName(item.shiftType || '')
-        const staffId = item.doctorId || ''
-        const row = rows.find(r => r.time === shiftName)
-        if (row && (DAY_KEYS.includes(dayKey) || dayKey.startsWith(selectedMonth.value))) {
-          row[dayKey] = staffId
-        }
+    const res = await getAllDoctorSchedules(startDate, endDate)
+
+    if (res.data && res.data.data && Array.isArray(res.data.data)) {
+      res.data.data.forEach(item => {
+        const key = getScheduleKey(item.department, item.shiftType, item.scheduleDate)
+        scheduleMap.value[key] = item.doctorId?.toString() || ''
       })
     }
   } catch (error) {
     console.error('获取排班失败:', error)
     ElMessage.error('获取排班失败')
+  } finally {
+    isLoading.value = false
   }
-
-  scheduleData.value = rows
 }
 
-const getDayKey = (dateStr) => {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  const weekday = date.getDay() === 0 ? 7 : date.getDay()
-  return DAY_KEYS[weekday - 1]
+const onMonthChange = async () => {
+  monthDays.value = getMonthDays(selectedMonth.value)
+  await fetchScheduleData()
 }
 
-const normalizeShiftName = (shift) => {
-  if (!shift) return ''
-  if (shift.includes('白') || shift.includes('早')) return '白班'
-  if (shift.includes('中')) return '中班'
-  if (shift.includes('夜')) return '夜班'
-  return shift
+const onDepartmentChange = () => {
 }
 
-const editScheduleCell = (dayKey, row) => {
-  if (!selectedDepartment.value) {
-    ElMessage.warning('请先选择科室')
+const autoSchedule = () => {
+  if (departments.value.length === 0) {
+    ElMessage.warning('暂无科室信息，无法排班')
     return
   }
-
-  if (!doctorsInSelectedDept.value.length) {
-    ElMessage.warning('当前科室暂无医生')
+  if (!selectedMonth.value) {
+    ElMessage.warning('请先选择月份')
     return
   }
-
-  editingRowRef.value = row
-  editingDayKey.value = dayKey
-  editingShiftName.value = row.time
-  selectedCellStaffId.value = row[dayKey] || ''
-  cellDialogVisible.value = true
+  autoScheduleDialogVisible.value = true
 }
 
-const confirmCellSchedule = async () => {
-  if (!editingRowRef.value || !editingDayKey.value) return
-  if (!selectedCellStaffId.value) {
-    ElMessage.warning('请选择值班医生')
-    return
-  }
+const confirmAutoSchedule = async () => {
+  isAutoScheduling.value = true
 
-  editingRowRef.value[editingDayKey.value] = selectedCellStaffId.value
-  
-  // 保存到数据库
   try {
-    const schedules = []
-    const currentDays = viewType.value === 'week' ? weekdays.value : monthDays.value
-    
-    scheduleData.value.forEach(row => {
-      DAY_KEYS.forEach(dayKey => {
-        if (row[dayKey] && row[dayKey] !== '休息') {
-          const dayData = currentDays.find(d => d.key === dayKey)
-          if (dayData && dayData.fullDate) {
-            schedules.push({
-              doctorId: row[dayKey],
-              department: selectedDepartment.value,
-              scheduleDate: dayData.fullDate,
-              startTime: getShiftStartTime(row.time),
-              endTime: getShiftEndTime(row.time),
-              shiftType: row.time
+    const allSchedules = []
+
+    departments.value.forEach(dept => {
+      const doctors = getDoctorsByDept(dept)
+      if (doctors.length === 0) return
+
+      monthDays.value.forEach((day, dayIdx) => {
+        SHIFT_NAMES.forEach((shiftName) => {
+          const doctor = doctors[dayIdx % doctors.length]
+          if (doctor) {
+            allSchedules.push({
+              doctorId: doctor.id,
+              department: dept,
+              scheduleDate: day.date,
+              shiftType: shiftName,
+              startTime: getShiftStartTime(shiftName),
+              endTime: getShiftEndTime(shiftName)
             })
           }
-        }
+        })
       })
     })
-    
-    if (schedules.length > 0) {
-      await saveDoctorSchedulesBatch(schedules)
+
+    if (allSchedules.length === 0) {
+      ElMessage.warning('没有可排班的医生')
+      return
     }
+
+    await saveDoctorSchedulesBatch(allSchedules)
+    autoScheduleDialogVisible.value = false
+    ElMessage.success('一键排班完成并已保存')
+    
+    await fetchScheduleData()
   } catch (error) {
-    console.error('保存排班失败:', error)
+    console.error('一键排班失败:', error)
+    ElMessage.error('一键排班失败')
+  } finally {
+    isAutoScheduling.value = false
   }
-  
-  cellDialogVisible.value = false
-  ElMessage.success('已更新')
-}
-
-const getShiftStartTime = (shiftName) => {
-  if (shiftName === '白班') return '08:00:00'
-  if (shiftName === '中班') return '16:00:00'
-  if (shiftName === '夜班') return '00:00:00'
-  return '09:00:00'
-}
-
-const getShiftEndTime = (shiftName) => {
-  if (shiftName === '白班') return '16:00:00'
-  if (shiftName === '中班') return '00:00:00'
-  if (shiftName === '夜班') return '08:00:00'
-  return '17:00:00'
-}
-
-const openApplyDialog = () => {
-  if (!selectedDepartment.value) {
-    ElMessage.warning('请先选择科室')
-    return
-  }
-  
-  // 检查是否有排班数据
-  const hasData = scheduleData.value.some(row => 
-    DAY_KEYS.some(key => row[key] && row[key] !== '休息')
-  )
-  
-  if (!hasData) {
-    ElMessage.warning('当前周暂无排班数据，无法复用')
-    return
-  }
-  
-  // 重置表单
-  applyForm.periodType = 'month'
-  applyForm.duration = 1
-  applyForm.startDate = ''
-  applyForm.endDate = ''
-  applyForm.excludeDates = []
-  
-  applyDialogVisible.value = true
-}
-
-const confirmApplySchedule = async () => {
-  if (applyForm.periodType === 'custom') {
-    if (!applyForm.startDate || !applyForm.endDate) {
-      ElMessage.warning('请选择起始和结束日期')
-      return
-    }
-    if (new Date(applyForm.startDate) > new Date(applyForm.endDate)) {
-      ElMessage.warning('结束日期不能早于起始日期')
-      return
-    }
-  }
-  
-  try {
-    applyLoading.value = true
-    
-    // 计算应用范围
-    let startDate, endDate
-    const today = new Date()
-    
-    if (applyForm.periodType === 'month') {
-      startDate = today.toISOString().split('T')[0]
-      const end = new Date(today)
-      end.setMonth(end.getMonth() + applyForm.duration)
-      endDate = end.toISOString().split('T')[0]
-    } else if (applyForm.periodType === 'quarter') {
-      startDate = today.toISOString().split('T')[0]
-      const end = new Date(today)
-      end.setMonth(end.getMonth() + applyForm.duration * 3)
-      endDate = end.toISOString().split('T')[0]
-    } else {
-      startDate = applyForm.startDate
-      endDate = applyForm.endDate
-    }
-    
-    // 生成所有需要排班的日期
-    const allDates = []
-    const current = new Date(startDate)
-    const end = new Date(endDate)
-    
-    while (current <= end) {
-      const dateStr = current.toISOString().split('T')[0]
-      // 检查是否在排除日期中
-      if (!applyForm.excludeDates.includes(dateStr)) {
-        allDates.push(dateStr)
-      }
-      current.setDate(current.getDate() + 1)
-    }
-    
-    // 根据当前周的排班生成新排班
-    const schedules = []
-    const weekStart = new Date(weekdays.value[0].fullDate)
-    
-    allDates.forEach(targetDate => {
-      const targetWeekday = new Date(targetDate).getDay() || 7 // 1-7
-      const sourceWeekdayIndex = targetWeekday - 1 // 0-6
-      
-      // 获取对应星期的排班数据
-      scheduleData.value.forEach(row => {
-        const dayKey = DAY_KEYS[sourceWeekdayIndex]
-        const staffId = row[dayKey]
-        
-        if (staffId && staffId !== '休息') {
-          schedules.push({
-            doctorId: staffId,
-            department: selectedDepartment.value,
-            scheduleDate: targetDate,
-            startTime: getShiftStartTime(row.time),
-            endTime: getShiftEndTime(row.time),
-            shiftType: row.time
-          })
-        }
-      })
-    })
-    
-    if (schedules.length === 0) {
-      ElMessage.warning('没有可应用的排班数据')
-      return
-    }
-    
-    await saveDoctorSchedulesBatch(schedules)
-    
-    applyLoading.value = false
-    applyDialogVisible.value = false
-    
-    ElMessage.success(`成功应用 ${schedules.length} 条排班记录`)
-    
-    // 刷新数据
-    await updateScheduleData()
-    
-  } catch (error) {
-    console.error('应用排班失败:', error)
-    applyLoading.value = false
-    ElMessage.error('应用排班失败：' + error.message)
-  }
-}
-
-const exportSchedule = () => {
-  ElMessage.info('导出功能开发中...')
-}
-
-const onViewTypeChange = () => {
-  updateScheduleData()
 }
 
 onMounted(async () => {
+  const now = new Date()
+  selectedMonth.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  monthDays.value = getMonthDays(selectedMonth.value)
+  
   await fetchAllDoctors()
-  await updateScheduleData()
+  await fetchScheduleData()
 })
 </script>
 
 <style scoped>
 .schedule-page {
-  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  padding: 20px;
+  height: calc(100vh - 84px);
+  box-sizing: border-box;
 }
 
 .top-card {
-  margin-bottom: 0;
+  flex-shrink: 0;
 }
 
 .top-row {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
 }
 
-.left-actions {
+.filter-area {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  flex: 1;
-}
-
-.right-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .meta-row {
-  margin-top: 8px;
+  margin-top: 12px;
   display: flex;
-  justify-content: space-between;
-  color: #909399;
-  font-size: 12px;
+  align-items: center;
+  gap: 12px;
+  color: #606266;
+  font-size: 14px;
 }
 
 .range {
+  font-weight: 500;
   color: #303133;
-  font-weight: 600;
+}
+
+.hint {
+  font-size: 13px;
+  color: #909399;
 }
 
 .board-card {
   flex: 1;
-  min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .legend {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 12px;
-  font-size: 12px;
-  color: #606266;
+  gap: 24px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  font-size: 14px;
+  color: #606266;
 }
 
 .dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
+  display: inline-block;
 }
 
-.dot.morning { background: #409EFF; }
-.dot.afternoon { background: #67C23A; }
-.dot.night { background: #E6A23C; }
-.dot.rest { background: #909399; }
+.dot.morning {
+  background: #409eff;
+}
 
-.table-wrap {
+.dot.rest {
+  background: #909399;
+}
+
+.schedule-list {
+  flex: 1;
+  overflow: auto;
+}
+
+.dept-section {
+  margin-bottom: 24px;
   border: 1px solid #EBEEF5;
   border-radius: 4px;
   overflow: hidden;
 }
 
-.header-row {
-  display: grid;
-  grid-template-columns: 80px repeat(7, 1fr);
-  background: #F5F7FA;
+.dept-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f5f7fa;
   border-bottom: 1px solid #EBEEF5;
 }
 
-.day-cell {
-  padding: 8px;
-  text-align: center;
-  border-left: 1px solid #EBEEF5;
-  font-size: 13px;
+.dept-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #303133;
 }
 
-.day-cell small {
-  display: block;
-  color: #909399;
-  font-size: 12px;
-  margin-top: 2px;
+.dept-doctors {
+  font-size: 13px;
+  color: #606266;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.header-row {
+  display: flex;
+  background: #fafafa;
+  border-bottom: 1px solid #EBEEF5;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  width: 100%;
+}
+
+.header-row > div:last-child,
+.data-row > div:last-child {
+  border-right: none;
 }
 
 .shift-cell {
-  padding: 12px 8px;
-  text-align: center;
+  width: 60px;
+  min-width: 60px;
+  padding: 8px 4px;
   font-weight: 600;
-  background: #FAFAFA;
+  color: #606266;
+  text-align: center;
   border-right: 1px solid #EBEEF5;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+}
+
+.day-cell {
+  flex: 1;
+  min-width: 40px;
+  padding: 4px 2px;
+  text-align: center;
+  border-right: 1px solid #EBEEF5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.day-cell.weekend {
+  background: #fdf6ec;
+}
+
+.day-cell small {
+  color: #909399;
+  font-size: 11px;
 }
 
 .data-row {
-  display: grid;
-  grid-template-columns: 80px repeat(7, 1fr);
+  display: flex;
   border-bottom: 1px solid #EBEEF5;
+  width: 100%;
 }
 
 .data-row:last-child {
@@ -802,122 +526,60 @@ onMounted(async () => {
 }
 
 .edit-cell {
-  padding: 12px 8px;
-  text-align: center;
-  border-left: 1px solid #EBEEF5;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 13px;
+  flex: 1;
+  min-width: 40px;
+  padding: 6px 2px;
+  border-right: 1px solid #EBEEF5;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
+  font-size: 12px;
 }
 
-.edit-cell:hover {
-  background: #F5F7FA;
+.edit-cell.weekend {
+  background: #fdf6ec;
 }
 
 .empty {
-  color: #C0C4CC;
-  font-size: 12px;
+  color: #c0c4cc;
 }
 
-.shift-morning .edit-cell { background: #ecf5ff; }
-.shift-afternoon .edit-cell { background: #f0f9eb; }
-.shift-night .edit-cell { background: #fdf6ec; }
-
-/* 月视图样式 */
-.month-table-wrap {
-  border: 1px solid #EBEEF5;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.month-header-row {
-  display: grid;
-  grid-template-columns: 80px repeat(31, 1fr);
-  background: #F5F7FA;
-  border-bottom: 1px solid #EBEEF5;
-}
-
-.month-day-cell {
-  padding: 6px 4px;
-  text-align: center;
-  border-left: 1px solid #EBEEF5;
-  font-size: 12px;
-  min-width: 32px;
-}
-
-.month-day-cell .day-number {
-  font-weight: 600;
+.doctor-name {
+  font-weight: 500;
   color: #303133;
-  margin-bottom: 2px;
 }
 
-.month-day-cell .day-label {
-  color: #909399;
-  font-size: 11px;
-}
-
-.month-day-cell.is-today .day-number {
-  color: #409EFF;
-}
-
-.month-data-row {
-  display: grid;
-  grid-template-columns: 80px repeat(31, 1fr);
-  border-bottom: 1px solid #EBEEF5;
-}
-
-.month-data-row:last-child {
-  border-bottom: none;
-}
-
-.month-edit-cell {
-  padding: 4px 2px;
-  text-align: center;
-  border-left: 1px solid #EBEEF5;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 36px;
-  overflow: hidden;
-}
-
-.month-edit-cell:hover {
-  background: #F5F7FA;
-}
-
-.month-edit-cell .staff-name {
-  font-size: 11px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.month-edit-cell.is-today {
+.shift-morning {
   background: #ecf5ff;
 }
 
-.shift-morning .month-edit-cell { background: #ecf5ff; }
-.shift-afternoon .month-edit-cell { background: #f0f9eb; }
-.shift-night .month-edit-cell { background: #fdf6ec; }
-
-/* 排班复用对话框样式 */
-.apply-info {
-  background: #f0f9eb;
-  border: 1px solid #e1f3d8;
-  padding: 12px;
+.preview-area {
+  margin-top: 16px;
+  border: 1px solid #EBEEF5;
   border-radius: 4px;
-  margin-bottom: 16px;
+  padding: 12px;
 }
 
-.apply-info p {
-  margin: 4px 0;
+.preview-title {
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #303133;
+}
+
+.preview-dept {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: #f5f7fa;
+  border-radius: 4px;
+}
+
+.dept-name {
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.dept-doctors {
   font-size: 13px;
   color: #606266;
 }

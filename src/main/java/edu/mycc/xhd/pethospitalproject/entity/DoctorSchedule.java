@@ -2,6 +2,7 @@ package edu.mycc.xhd.pethospitalproject.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.time.LocalDateTime;
@@ -10,19 +11,23 @@ import java.time.LocalDateTime;
 public class DoctorSchedule {
     @TableId(type = IdType.AUTO)
     private Long id;
-    private String doctorId;
+    private Long doctorId; // 改为 Long 类型
     private String department;
     private String scheduleDate;
     private String startTime;
     private String endTime;
     private String shiftType;
+    @TableField("is_emergency_24h")
+    private Boolean emergency24h;
+    private String emergencyPeriod; // 急诊时段
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public DoctorSchedule() {}
 
-    public DoctorSchedule(Long id, String doctorId, String department, String scheduleDate, String startTime, 
-                         String endTime, String shiftType, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public DoctorSchedule(Long id, Long doctorId, String department, String scheduleDate, String startTime, 
+                         String endTime, String shiftType, Boolean emergency24h, String emergencyPeriod,
+                         LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.doctorId = doctorId;
         this.department = department;
@@ -30,6 +35,8 @@ public class DoctorSchedule {
         this.startTime = startTime;
         this.endTime = endTime;
         this.shiftType = shiftType;
+        this.emergency24h = emergency24h;
+        this.emergencyPeriod = emergencyPeriod;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -42,11 +49,11 @@ public class DoctorSchedule {
         this.id = id;
     }
 
-    public String getDoctorId() {
+    public Long getDoctorId() {
         return doctorId;
     }
 
-    public void setDoctorId(String doctorId) {
+    public void setDoctorId(Long doctorId) {
         this.doctorId = doctorId;
     }
 
@@ -88,6 +95,22 @@ public class DoctorSchedule {
 
     public void setShiftType(String shiftType) {
         this.shiftType = shiftType;
+    }
+
+    public Boolean getEmergency24h() {
+        return emergency24h;
+    }
+
+    public void setEmergency24h(Boolean emergency24h) {
+        this.emergency24h = emergency24h;
+    }
+
+    public String getEmergencyPeriod() {
+        return emergencyPeriod;
+    }
+
+    public void setEmergencyPeriod(String emergencyPeriod) {
+        this.emergencyPeriod = emergencyPeriod;
     }
 
     public LocalDateTime getCreatedAt() {

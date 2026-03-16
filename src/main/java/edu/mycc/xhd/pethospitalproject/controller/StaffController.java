@@ -155,6 +155,62 @@ public class StaffController {
     }
     
     /**
+     * 根据科室获取医生列表
+     */
+    @GetMapping("/doctors")
+    public List<Map<String, Object>> getDoctorsByDepartment(@RequestParam(required = false) String department) {
+        List<Map<String, Object>> doctors = new ArrayList<>();
+        
+        // 获取所有医生
+        List<Doctor> doctorList = doctorService.list();
+        
+        for (Doctor doctor : doctorList) {
+            // 如果指定了科室名称，则过滤
+            if (department != null && !department.isEmpty()) {
+                if (!department.equals(doctor.getDepartment())) {
+                    continue;
+                }
+            }
+            
+            Map<String, Object> doctorMap = new HashMap<>();
+            doctorMap.put("id", doctor.getId());
+            doctorMap.put("employeeId", doctor.getEmployeeId());
+            doctorMap.put("name", doctor.getName());
+            doctorMap.put("department", doctor.getDepartment());
+            doctorMap.put("position", doctor.getPosition());
+            doctorMap.put("phone", doctor.getPhone());
+            doctorMap.put("email", doctor.getEmail());
+            doctors.add(doctorMap);
+        }
+        
+        return doctors;
+    }
+    
+    /**
+     * 获取所有护士列表
+     */
+    @GetMapping("/receptionists")
+    public List<Map<String, Object>> getAllReceptionists() {
+        List<Map<String, Object>> receptionists = new ArrayList<>();
+        
+        List<Receptionist> receptionistList = receptionistService.list();
+        
+        for (Receptionist receptionist : receptionistList) {
+            Map<String, Object> receptionistMap = new HashMap<>();
+            receptionistMap.put("id", receptionist.getId());
+            receptionistMap.put("employeeId", receptionist.getEmployeeId());
+            receptionistMap.put("name", receptionist.getName());
+            receptionistMap.put("department", receptionist.getDepartment());
+            receptionistMap.put("position", receptionist.getPosition());
+            receptionistMap.put("phone", receptionist.getPhone());
+            receptionistMap.put("email", receptionist.getEmail());
+            receptionists.add(receptionistMap);
+        }
+        
+        return receptionists;
+    }
+    
+    /**
      * 更新员工信息
      */
     @PutMapping("/{id}")

@@ -2,11 +2,14 @@ package edu.mycc.xhd.pethospitalproject.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import edu.mycc.xhd.pethospitalproject.entity.ReceptionistSchedule;
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
+@Mapper
 public interface ReceptionistScheduleMapper extends BaseMapper<ReceptionistSchedule> {
     
     /**
@@ -32,4 +35,18 @@ public interface ReceptionistScheduleMapper extends BaseMapper<ReceptionistSched
         @Param("receptionistId") Long receptionistId,
         @Param("startDate") String startDate,
         @Param("endDate") String endDate);
+    
+    /**
+     * 根据日期范围删除排班
+     */
+    @Delete("DELETE FROM receptionist_schedules WHERE schedule_date BETWEEN #{startDate} AND #{endDate}")
+    void deleteByDateRange(
+        @Param("startDate") String startDate,
+        @Param("endDate") String endDate);
+    
+    /**
+     * 根据科室删除排班
+     */
+    @Delete("DELETE FROM receptionist_schedules WHERE department = #{department}")
+    void deleteByDepartment(@Param("department") String department);
 }

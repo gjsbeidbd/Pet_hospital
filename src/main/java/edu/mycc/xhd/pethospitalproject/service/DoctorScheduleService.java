@@ -17,4 +17,12 @@ public class DoctorScheduleService extends ServiceImpl<DoctorScheduleMapper, Doc
     public List<DoctorSchedule> getSchedulesByDateRangeAndDepartment(String startDate, String endDate, String department) {
         return doctorScheduleMapper.findByDateRangeAndDepartment(startDate, endDate, department);
     }
+    
+    public void deleteByDateRange(String startDate, String endDate) {
+        doctorScheduleMapper.deleteByDateRange(startDate, endDate);
+    }
+    
+    public List<DoctorSchedule> getSchedulesByDoctorIdAndDateRange(Long doctorId, String startDate, String endDate) {
+        return doctorScheduleMapper.findByDoctorIdAndDateRange(doctorId, startDate, endDate);
+    }
 }

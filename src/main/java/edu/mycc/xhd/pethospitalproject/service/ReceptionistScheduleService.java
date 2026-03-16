@@ -17,4 +17,8 @@ public class ReceptionistScheduleService extends ServiceImpl<ReceptionistSchedul
     public List<ReceptionistSchedule> getSchedulesByDateRangeAndDepartment(String startDate, String endDate, String department) {
         return receptionistScheduleMapper.findByDateRangeAndDepartment(startDate, endDate, department);
     }
+    
+    public void deleteByDateRange(String startDate, String endDate) {
+        receptionistScheduleMapper.deleteByDateRange(startDate, endDate);
+    }
 }

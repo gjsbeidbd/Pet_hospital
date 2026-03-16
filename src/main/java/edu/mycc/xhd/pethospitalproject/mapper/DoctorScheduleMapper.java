@@ -2,11 +2,14 @@ package edu.mycc.xhd.pethospitalproject.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import edu.mycc.xhd.pethospitalproject.entity.DoctorSchedule;
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
+@Mapper
 public interface DoctorScheduleMapper extends BaseMapper<DoctorSchedule> {
     
     /**
@@ -29,7 +32,7 @@ public interface DoctorScheduleMapper extends BaseMapper<DoctorSchedule> {
      */
     @Select("SELECT * FROM doctor_schedules WHERE doctor_id = #{doctorId} AND schedule_date BETWEEN #{startDate} AND #{endDate}")
     List<DoctorSchedule> findByDoctorIdAndDateRange(
-        @Param("doctorId") String doctorId,
+        @Param("doctorId") Long doctorId,
         @Param("startDate") String startDate,
         @Param("endDate") String endDate);
     
@@ -40,4 +43,18 @@ public interface DoctorScheduleMapper extends BaseMapper<DoctorSchedule> {
     List<DoctorSchedule> findByDateAndDepartment(
         @Param("date") String date,
         @Param("department") String department);
+    
+    /**
+     * 根据日期范围删除排班
+     */
+    @Delete("DELETE FROM doctor_schedules WHERE schedule_date BETWEEN #{startDate} AND #{endDate}")
+    void deleteByDateRange(
+        @Param("startDate") String startDate,
+        @Param("endDate") String endDate);
+    
+    /**
+     * 根据科室删除排班
+     */
+    @Delete("DELETE FROM doctor_schedules WHERE department = #{department}")
+    void deleteByDepartment(@Param("department") String department);
 }

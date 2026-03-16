@@ -7,11 +7,11 @@ import Layout from '@/components/Layout.vue';
 // 导入子组件
 import BusinessReport from './components/BusinessReport.vue';
 import DirectorStaffManagement from './components/DirectorStaffManagement.vue';
-import DoctorScheduleBoard from './components/DoctorScheduleBoard.vue';
-import NurseScheduleBoard from './components/NurseScheduleBoard.vue';
 import DrugInventory from './components/DrugInventory.vue';
 import HospitalSettings from './components/HospitalSettings.vue';
 import PersonalCenter from './components/PersonalCenter.vue';
+import DoctorScheduleBoard from './components/DoctorScheduleBoard.vue';
+import NurseScheduleBoard from './components/NurseScheduleBoard.vue';
 
 // Import Element Plus icons
 import {

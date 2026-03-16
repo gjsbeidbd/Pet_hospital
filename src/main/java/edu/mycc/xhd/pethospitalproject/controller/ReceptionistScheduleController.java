@@ -11,11 +11,30 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/receptionist-schedules")
-@CrossOrigin(origins = "*")
 public class ReceptionistScheduleController {
     
     @Autowired
     private ReceptionistScheduleService receptionistScheduleService;
+    
+    /**
+     * 根据日期范围获取所有科室护士排班
+     */
+    @GetMapping("/date-range")
+    public Map<String, Object> getSchedulesByDateRange(
+        @RequestParam String startDate,
+        @RequestParam String endDate
+    ) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            List<ReceptionistSchedule> schedules = receptionistScheduleService.getSchedulesByDateRangeAndDepartment(startDate, endDate, null);
+            result.put("code", "0");
+            result.put("data", schedules);
+        } catch (Exception e) {
+            result.put("code", "500");
+            result.put("message", e.getMessage());
+        }
+        return result;
+    }
     
     /**
      * 获取前台排班列表
@@ -56,15 +75,21 @@ public class ReceptionistScheduleController {
     }
     
     /**
-     * 批量保存前台排班
+     * 批量保存前台排班（覆盖模式：先删除日期范围内的排班再保存）
      */
     @PostMapping("/batch")
     public Map<String, Object> saveBatch(@RequestBody List<ReceptionistSchedule> schedules) {
         Map<String, Object> result = new HashMap<>();
         try {
+            if (schedules != null && !schedules.isEmpty()) {
+                String startDate = schedules.get(0).getScheduleDate();
+                String endDate = schedules.get(schedules.size() - 1).getScheduleDate();
+                receptionistScheduleService.deleteByDateRange(startDate, endDate);
+            }
             receptionistScheduleService.saveBatch(schedules);
             result.put("code", "0");
             result.put("message", "批量保存成功");
+            result.put("count", schedules.size());
         } catch (Exception e) {
             result.put("code", "500");
             result.put("message", e.getMessage());

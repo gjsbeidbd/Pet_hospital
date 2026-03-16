@@ -2,6 +2,7 @@ package edu.mycc.xhd.pethospitalproject.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import edu.mycc.xhd.pethospitalproject.entity.Doctor;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -26,4 +27,10 @@ public interface DoctorMapper extends BaseMapper<Doctor> {
      */
     @Select("SELECT * FROM doctors WHERE (phone = #{phoneOrEmail} OR email = #{phoneOrEmail}) AND password = #{password}")
     Doctor findByPhoneOrEmailAndPassword(@Param("phoneOrEmail") String phoneOrEmail, @Param("password") String password);
+    
+    /**
+     * 根据科室删除医生
+     */
+    @Delete("DELETE FROM doctors WHERE department = #{department}")
+    void deleteByDepartment(@Param("department") String department);
 }

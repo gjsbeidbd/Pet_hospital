@@ -68,10 +68,10 @@ public class DepartmentController {
     }
     
     /**
-     * 删除科室
+     * 删除科室（同时删除相关排班数据）
      */
     @DeleteMapping("/{id}")
     public boolean delete(@PathVariable Long id) {
-        return departmentService.removeById(id);
+        return departmentService.deleteDepartmentWithSchedules(id);
     }
 }

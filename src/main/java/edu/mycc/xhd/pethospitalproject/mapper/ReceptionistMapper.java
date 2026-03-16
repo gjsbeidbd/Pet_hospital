@@ -2,9 +2,12 @@ package edu.mycc.xhd.pethospitalproject.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import edu.mycc.xhd.pethospitalproject.entity.Receptionist;
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+@Mapper
 public interface ReceptionistMapper extends BaseMapper<Receptionist> {
     
     /**
@@ -48,4 +51,10 @@ public interface ReceptionistMapper extends BaseMapper<Receptionist> {
      */
     @Select("SELECT * FROM receptionists WHERE (phone = #{phoneOrEmail} OR email = #{phoneOrEmail}) AND password = #{password} AND status = 'active'")
     Receptionist authenticateByPhoneOrEmailAndPassword(@Param("phoneOrEmail") String phoneOrEmail, @Param("password") String password);
+    
+    /**
+     * 根据科室删除护士
+     */
+    @Delete("DELETE FROM receptionists WHERE department = #{department}")
+    void deleteByDepartment(@Param("department") String department);
 }

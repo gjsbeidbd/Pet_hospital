@@ -125,9 +125,23 @@ export const getMedicalRecordsByDoctorId = (doctorId) => {
 
 // ==================== 排班管理相关 ====================
 
-// 获取医生排班信息
+// 获取医生排班信息（按科室和日期范围）
 export const getDoctorSchedules = (params) => {
-  return api.get('/api/doctor-schedules', { params });
+  return api.get('/api/doctor-schedules/department/month', { params });
+};
+
+// 获取所有医生排班信息（按日期范围）
+export const getAllDoctorSchedules = (startDate, endDate) => {
+  return api.get('/api/doctor-schedules/date-range', { 
+    params: { startDate, endDate } 
+  });
+};
+
+// 获取医生自己的排班信息
+export const getMyDoctorSchedules = (doctorId, startDate, endDate) => {
+  return api.get(`/api/doctor-schedules/doctor/${doctorId}`, { 
+    params: { startDate, endDate } 
+  });
 };
 
 // 保存医生排班
@@ -150,6 +164,13 @@ export const getReceptionistSchedules = (params) => {
   return api.get('/api/receptionist-schedules', { params });
 };
 
+// 获取所有护士排班信息（按日期范围）
+export const getAllNurseSchedules = (startDate, endDate) => {
+  return api.get('/api/receptionist-schedules/date-range', { 
+    params: { startDate, endDate } 
+  });
+};
+
 // 保存前台排班
 export const saveReceptionistSchedule = (data) => {
   return api.post('/api/receptionist-schedules', data);
@@ -163,6 +184,11 @@ export const saveReceptionistSchedulesBatch = (data) => {
 // 删除前台排班
 export const deleteReceptionistSchedule = (id) => {
   return api.delete(`/api/receptionist-schedules/${id}`);
+};
+
+// 获取所有护士列表
+export const getAllNurses = () => {
+  return api.get('/api/staff/receptionists');
 };
 
 // ==================== 费用管理相关 ====================
@@ -308,6 +334,18 @@ export const addStaff = (staffData) => {
 // 获取前台人员的科室列表
 export const getReceptionistDepartments = () => {
   return api.get('/api/staff/receptionist-departments');
+};
+
+// ==================== 医生管理相关 ====================
+
+// 根据科室获取医生列表
+export const getDoctorsByDepartment = (department) => {
+  return api.get(`/api/staff/doctors?department=${encodeURIComponent(department)}`);
+};
+
+// 获取所有医生列表
+export const getAllDoctors = () => {
+  return api.get('/api/staff/doctors');
 };
 
 // ==================== 排班管理相关 ====================

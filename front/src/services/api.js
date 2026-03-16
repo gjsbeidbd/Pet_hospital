@@ -123,14 +123,46 @@ export const getMedicalRecordsByDoctorId = (doctorId) => {
   return api.get(`/api/medical-records/doctor?doctorId=${doctorId}`);
 };
 
-// 获取排班信息
-export const getSchedules = (params) => {
-  return api.get('/api/schedules', { params });
+// ==================== 排班管理相关 ====================
+
+// 获取医生排班信息
+export const getDoctorSchedules = (params) => {
+  return api.get('/api/doctor-schedules', { params });
 };
 
-// 应用排班到周期
-export const applyScheduleToPeriod = (data) => {
-  return api.post('/api/schedules/apply-to-period', data);
+// 保存医生排班
+export const saveDoctorSchedule = (data) => {
+  return api.post('/api/doctor-schedules', data);
+};
+
+// 批量保存医生排班
+export const saveDoctorSchedulesBatch = (data) => {
+  return api.post('/api/doctor-schedules/batch', data);
+};
+
+// 删除医生排班
+export const deleteDoctorSchedule = (id) => {
+  return api.delete(`/api/doctor-schedules/${id}`);
+};
+
+// 获取前台排班信息
+export const getReceptionistSchedules = (params) => {
+  return api.get('/api/receptionist-schedules', { params });
+};
+
+// 保存前台排班
+export const saveReceptionistSchedule = (data) => {
+  return api.post('/api/receptionist-schedules', data);
+};
+
+// 批量保存前台排班
+export const saveReceptionistSchedulesBatch = (data) => {
+  return api.post('/api/receptionist-schedules/batch', data);
+};
+
+// 删除前台排班
+export const deleteReceptionistSchedule = (id) => {
+  return api.delete(`/api/receptionist-schedules/${id}`);
 };
 
 // ==================== 费用管理相关 ====================
@@ -197,6 +229,33 @@ export const deletePetBreed = (breedId) => {
   return api.delete(`/api/pet-breeds/${breedId}`);
 };
 
+// ==================== 科室管理相关 ====================
+
+// 获取所有科室
+export const getDepartments = () => {
+  return api.get('/api/departments');
+};
+
+// 新增科室
+export const addDepartment = (departmentData) => {
+  return api.post('/api/departments', departmentData);
+};
+
+// 更新科室
+export const updateDepartment = (departmentId, departmentData) => {
+  return api.put(`/api/departments/${departmentId}`, departmentData);
+};
+
+// 删除科室
+export const deleteDepartment = (departmentId) => {
+  return api.delete(`/api/departments/${departmentId}`);
+};
+
+// 获取各科室医生人数统计
+export const getDepartmentStats = () => {
+  return api.get('/api/departments/stats');
+};
+
 // ==================== 药品库存管理相关 ====================
 
 // 获取所有药品
@@ -219,6 +278,38 @@ export const deleteDrug = (drugId) => {
   return api.delete(`/api/drug-inventory/${drugId}`);
 };
 
+// ==================== 员工管理相关 ====================
 
+// 获取所有员工
+export const getAllStaff = () => {
+  return api.get('/api/staff');
+};
+
+// 根据 ID 获取员工
+export const getStaffById = (staffId) => {
+  return api.get(`/api/staff/${staffId}`);
+};
+
+// 更新员工信息
+export const updateStaff = (staffId, staffData) => {
+  return api.put(`/api/staff/${staffId}`, staffData);
+};
+
+// 删除员工
+export const deleteStaff = (staffId) => {
+  return api.delete(`/api/staff/${staffId}`);
+};
+
+// 新增员工
+export const addStaff = (staffData) => {
+  return api.post('/api/staff', staffData);
+};
+
+// 获取前台人员的科室列表
+export const getReceptionistDepartments = () => {
+  return api.get('/api/staff/receptionist-departments');
+};
+
+// ==================== 排班管理相关 ====================
 
 export default api;

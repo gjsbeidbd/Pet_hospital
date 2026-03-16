@@ -1,12 +1,13 @@
 package edu.mycc.xhd.pethospitalproject.service;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import edu.mycc.xhd.pethospitalproject.entity.Receptionist;
 import edu.mycc.xhd.pethospitalproject.mapper.ReceptionistMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ReceptionistService {
+public class ReceptionistService extends ServiceImpl<ReceptionistMapper, Receptionist> {
     
     @Autowired
     private ReceptionistMapper receptionistMapper;

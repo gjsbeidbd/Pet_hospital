@@ -93,6 +93,42 @@
           </el-table>
         </el-tab-pane>
 
+        <!-- 科室管理 -->
+        <el-tab-pane label="科室管理" name="department">
+          <div class="table-toolbar">
+            <el-button type="primary" @click="showAddDepartmentDialog">
+              + 新增科室
+            </el-button>
+          </div>
+          
+          <el-table :data="departments" border style="width: 100%" class="data-table">
+            <el-table-column prop="code" label="科室代码" width="120"></el-table-column>
+            <el-table-column prop="name" label="科室名称" width="150"></el-table-column>
+            <el-table-column prop="description" label="科室描述" min-width="250" show-overflow-tooltip></el-table-column>
+            <el-table-column prop="doctorCount" label="医生人数" width="100" align="center"></el-table-column>
+            <el-table-column label="状态" width="100" align="center">
+              <template #default="scope">
+                <el-tag :type="scope.row.status ? 'success' : 'info'" size="default">
+                  {{ scope.row.status ? '启用' : '禁用' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="220" fixed="right" align="center">
+              <template #default="scope">
+                <el-button type="primary" size="small" @click="showEditDepartmentDialog(scope.row)">修改</el-button>
+                <el-button 
+                  :type="scope.row.status ? 'warning' : 'success'" 
+                  size="small" 
+                  @click="toggleDepartmentStatus(scope.row)"
+                >
+                  {{ scope.row.status ? '禁用' : '启用' }}
+                </el-button>
+                <el-button type="danger" size="small" @click="handleDeleteDepartment(scope.row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+
         <!-- 公告管理 -->
         <el-tab-pane label="公告管理" name="announcement">
           <div class="announcement-container">
@@ -250,6 +286,36 @@
         <el-button type="primary" @click="submitPetTypeForm" :loading="petTypeSubmitting">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 新增/编辑科室对话框 -->
+    <el-dialog 
+      v-model="departmentDialogVisible" 
+      :title="isDepartmentEditMode ? '修改科室' : '新增科室'" 
+      width="500px"
+      @close="resetDepartmentForm"
+    >
+      <el-form :model="departmentForm" label-width="100px" :rules="departmentRules" ref="departmentFormRef">
+        <el-form-item label="科室名称" prop="name">
+          <el-input v-model="departmentForm.name" placeholder="请输入科室名称" maxlength="50"></el-input>
+        </el-form-item>
+        <el-form-item label="科室代码" prop="code">
+          <el-input v-model="departmentForm.code" placeholder="请输入科室代码（如：NK、WK）" maxlength="20"></el-input>
+        </el-form-item>
+        <el-form-item label="科室描述" prop="description">
+          <el-input 
+            v-model="departmentForm.description" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="请输入科室描述"
+            maxlength="500"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="departmentDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitDepartmentForm" :loading="departmentSubmitting">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -267,7 +333,12 @@ import {
   updatePetSpecies,
   deletePetSpecies,
   getPetBreedsBySpeciesId,
-  addPetBreed
+  addPetBreed,
+  getDepartments,
+  addDepartment,
+  updateDepartment,
+  deleteDepartment,
+  getDepartmentStats
 } from '@/services/api';
 
 // 当前激活的选项卡
@@ -323,6 +394,34 @@ const petTypeForm = reactive({
   description: ''
 });
 
+// 科室管理相关
+const departments = ref([]);
+const loadingDepartments = ref(false);
+
+const departmentDialogVisible = ref(false);
+const isDepartmentEditMode = ref(false);
+const departmentFormRef = ref(null);
+const departmentSubmitting = ref(false);
+const departmentForm = reactive({
+  id: null,
+  name: '',
+  code: '',
+  description: '',
+  status: true
+});
+
+// 科室表单验证规则
+const departmentRules = {
+  name: [
+    { required: true, message: '请输入科室名称', trigger: 'blur' },
+    { min: 1, max: 50, message: '长度在 1 到 50 个字符', trigger: 'blur' }
+  ],
+  code: [
+    { required: true, message: '请输入科室代码', trigger: 'blur' },
+    { min: 1, max: 20, message: '长度在 1 到 20 个字符', trigger: 'blur' }
+  ]
+};
+
 // 宠物种类表单验证规则
 const petTypeRules = {
   speciesName: [
@@ -339,12 +438,7 @@ const announcementForm = reactive({
 });
 
 // 公告列表
-const announcements = ref([
-  { id: 1, title: '系统维护通知', type: 'system', publishDate: '2026-03-10', content: '系统将于今晚 23:00 进行维护...' },
-  { id: 2, title: '春季疫苗接种优惠活动', type: 'promotion', publishDate: '2026-03-08', content: '即日起至 4 月 30 日，疫苗接种享受 8 折优惠...' },
-  { id: 3, title: '新医生坐诊通知', type: 'news', publishDate: '2026-03-05', content: '我院特邀资深兽医专家王医生于 3 月 15 日起正式坐诊...' },
-  { id: 4, title: '春节期间门诊安排', type: 'important', publishDate: '2026-02-01', content: '春节期间门诊时间安排如下...' },
-]);
+const announcements = ref([]);
 
 // 加载费用项目
 const loadFeeItems = async () => {
@@ -407,10 +501,44 @@ const loadPetTypes = async () => {
   }
 };
 
+// 加载科室数据
+const loadDepartments = async () => {
+  try {
+    loadingDepartments.value = true;
+    // 同时获取科室列表和医生人数统计
+    const [departmentsResponse, statsResponse] = await Promise.all([
+      getDepartments(),
+      getDepartmentStats()
+    ]);
+    
+    // 将统计数据转换为 Map，方便查找
+    const statsMap = {};
+    statsResponse.data.forEach(stat => {
+      statsMap[stat.department] = stat.count;
+    });
+    
+    // 将后端数据转换为前端格式，并添加医生人数
+    departments.value = departmentsResponse.data.map(item => ({
+      id: item.id,
+      code: item.code,
+      name: item.name,
+      description: item.description || '',
+      doctorCount: statsMap[item.name] || 0, // 根据科室名称匹配医生人数
+      status: item.isActive
+    }));
+  } catch (error) {
+    console.error('加载科室数据失败:', error);
+    ElMessage.error('加载科室数据失败，请检查后端服务');
+  } finally {
+    loadingDepartments.value = false;
+  }
+};
+
 // 组件挂载时加载数据
 onMounted(() => {
   loadFeeItems();
   loadPetTypes();
+  loadDepartments();
 });
 
 // 显示新增费用对话框
@@ -637,7 +765,125 @@ const showAddBreedDialog = (row) => {
 const removeBreed = (row, index) => {
   row.breeds.splice(index, 1);
   ElMessage.success('品种已移除');
-};;
+};
+
+// 科室管理方法
+const showAddDepartmentDialog = () => {
+  isDepartmentEditMode.value = false;
+  Object.assign(departmentForm, {
+    id: null,
+    name: '',
+    code: '',
+    description: '',
+    status: true
+  });
+  departmentDialogVisible.value = true;
+};
+
+const showEditDepartmentDialog = (row) => {
+  isDepartmentEditMode.value = true;
+  Object.assign(departmentForm, {
+    id: row.id,
+    name: row.name,
+    code: row.code,
+    description: row.description || '',
+    doctorCount: row.doctorCount || 0,
+    status: row.status
+  });
+  departmentDialogVisible.value = true;
+};
+
+const resetDepartmentForm = () => {
+  if (departmentFormRef.value) {
+    departmentFormRef.value.resetFields();
+  }
+  Object.assign(departmentForm, {
+    id: null,
+    name: '',
+    code: '',
+    description: '',
+    doctorCount: 0,
+    status: true
+  });
+};
+
+const submitDepartmentForm = async () => {
+  if (!departmentFormRef.value) return;
+  
+  await departmentFormRef.value.validate(async (valid) => {
+    if (!valid) return;
+    
+    try {
+      departmentSubmitting.value = true;
+      const formData = {
+        code: departmentForm.code,
+        name: departmentForm.name,
+        description: departmentForm.description || '',
+        doctorCount: departmentForm.doctorCount || 0,
+        isActive: departmentForm.status
+      };
+      
+      if (isDepartmentEditMode.value) {
+        // 修改
+        await updateDepartment(departmentForm.id, formData);
+        ElMessage.success('科室信息更新成功');
+      } else {
+        // 新增
+        await addDepartment(formData);
+        ElMessage.success('科室添加成功');
+      }
+      
+      departmentDialogVisible.value = false;
+      await loadDepartments(); // 重新加载数据
+    } catch (error) {
+      console.error('操作失败:', error);
+      ElMessage.error(isDepartmentEditMode.value ? '修改失败' : '添加失败');
+    } finally {
+      departmentSubmitting.value = false;
+    }
+  });
+};
+
+const toggleDepartmentStatus = async (row) => {
+  try {
+    const newStatus = !row.status;
+    await updateDepartment(row.id, {
+      code: row.code,
+      name: row.name,
+      description: row.description || '',
+      doctorCount: row.doctorCount || 0,
+      isActive: newStatus
+    });
+    row.status = newStatus;
+    ElMessage.success(`已${newStatus ? '启用' : '禁用'}"${row.name}"`);
+  } catch (error) {
+    console.error('更新状态失败:', error);
+    ElMessage.error('更新状态失败');
+  }
+};
+
+const handleDeleteDepartment = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除科室"${row.name}"吗？`,
+      '警告',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    );
+    
+    await deleteDepartment(row.id);
+    ElMessage.success('删除成功');
+    await loadDepartments(); // 重新加载数据
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error);
+      ElMessage.error('删除失败');
+    }
+  }
+};
 
 // 公告管理方法
 const publishAnnouncement = () => {

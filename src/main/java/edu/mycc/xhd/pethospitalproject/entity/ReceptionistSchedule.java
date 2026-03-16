@@ -6,11 +6,11 @@ import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.time.LocalDateTime;
 
-@TableName("doctor_schedules")
-public class DoctorSchedule {
+@TableName("receptionist_schedules")
+public class ReceptionistSchedule {
     @TableId(type = IdType.AUTO)
     private Long id;
-    private String doctorId;
+    private Long receptionistId;
     private String department;
     private String scheduleDate;
     private String startTime;
@@ -19,12 +19,13 @@ public class DoctorSchedule {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public DoctorSchedule() {}
+    public ReceptionistSchedule() {}
 
-    public DoctorSchedule(Long id, String doctorId, String department, String scheduleDate, String startTime, 
-                         String endTime, String shiftType, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public ReceptionistSchedule(Long id, Long receptionistId, String department, String scheduleDate, 
+                               String startTime, String endTime, String shiftType, 
+                               LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
-        this.doctorId = doctorId;
+        this.receptionistId = receptionistId;
         this.department = department;
         this.scheduleDate = scheduleDate;
         this.startTime = startTime;
@@ -42,12 +43,12 @@ public class DoctorSchedule {
         this.id = id;
     }
 
-    public String getDoctorId() {
-        return doctorId;
+    public Long getReceptionistId() {
+        return receptionistId;
     }
 
-    public void setDoctorId(String doctorId) {
-        this.doctorId = doctorId;
+    public void setReceptionistId(Long receptionistId) {
+        this.receptionistId = receptionistId;
     }
 
     public String getDepartment() {

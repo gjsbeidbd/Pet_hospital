@@ -7,8 +7,8 @@ import Layout from '@/components/Layout.vue';
 // 导入子组件
 import BusinessReport from './components/BusinessReport.vue';
 import DirectorStaffManagement from './components/DirectorStaffManagement.vue';
-import DoctorSchedule from './components/DoctorSchedule.vue';
-import ReceptionistSchedule from './components/ReceptionistSchedule.vue';
+import DoctorScheduleBoard from './components/DoctorScheduleBoard.vue';
+import NurseScheduleBoard from './components/NurseScheduleBoard.vue';
 import DrugInventory from './components/DrugInventory.vue';
 import HospitalSettings from './components/HospitalSettings.vue';
 import PersonalCenter from './components/PersonalCenter.vue';
@@ -46,13 +46,18 @@ const menuList = [
   },
   {
     index: '3',
-    title: '医生排班管理',
-    icon: 'Calendar'
-  },
-  {
-    index: '6',
-    title: '前台/护士排班管理',
-    icon: 'Calendar'
+    title: '排班管理',
+    icon: 'Calendar',
+    children: [
+      {
+        index: '3-1',
+        title: '医生排班'
+      },
+      {
+        index: '3-2',
+        title: '护士排班'
+      }
+    ]
   },
   {
     index: '4',
@@ -156,14 +161,14 @@ onMounted(() => {
       <DirectorStaffManagement />
     </div>
 
-    <!-- 医生排班管理 -->
-    <div v-if="activeMenu === '3'">
-      <DoctorSchedule />
+    <!-- 医生排班 -->
+    <div v-if="activeMenu === '3-1'">
+      <DoctorScheduleBoard />
     </div>
 
-    <!-- 前台/护士排班管理 -->
-    <div v-if="activeMenu === '6'">
-      <ReceptionistSchedule />
+    <!-- 护士排班 -->
+    <div v-if="activeMenu === '3-2'">
+      <NurseScheduleBoard />
     </div>
 
     <!-- 药品库存管理 -->

@@ -65,13 +65,18 @@ CREATE TABLE pets (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) COMMENT='宠物表';
 
--- 前台表
+-- 前台表（护士表）
 CREATE TABLE receptionists (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     employee_id VARCHAR(20) UNIQUE NOT NULL COMMENT '工号',
     name VARCHAR(100) NOT NULL COMMENT '姓名',
+    birthday DATE COMMENT '出生日期',
+    id_card VARCHAR(18) COMMENT '身份证号码',
+    address VARCHAR(200) COMMENT '居住地址',
     phone VARCHAR(20) UNIQUE COMMENT '电话（唯一）',
     email VARCHAR(100) UNIQUE COMMENT '邮箱（唯一）',
+    department VARCHAR(50) NOT NULL COMMENT '科室',
+    position VARCHAR(100) COMMENT '职称（如：护士、护师、主管护师）',
     hire_date DATE COMMENT '入职日期',
     password VARCHAR(255) NOT NULL COMMENT '密码',
     status ENUM('active', 'inactive') DEFAULT 'active' COMMENT '状态',
@@ -79,19 +84,23 @@ CREATE TABLE receptionists (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     -- 确保手机号和邮箱至少有一个不为空
     CONSTRAINT chk_receptionist_contact CHECK (phone IS NOT NULL OR email IS NOT NULL)
-) COMMENT='前台表';
+) COMMENT='前台表（护士表）';
+
+
 
 -- 医生表
 CREATE TABLE doctors (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     employee_id VARCHAR(20) UNIQUE NOT NULL COMMENT '工号',
     name VARCHAR(100) NOT NULL COMMENT '姓名',
-    department ENUM('内科', '外科', '护理部') NOT NULL COMMENT '科室',
-    position VARCHAR(100) COMMENT '职位',
+    birthday DATE COMMENT '出生日期',
+    id_card VARCHAR(18) COMMENT '身份证号码',
+    address VARCHAR(200) COMMENT '居住地址',
+    department VARCHAR(50) NOT NULL COMMENT '科室',
+    position VARCHAR(100) COMMENT '职称（如：住院医师、主治医师等）',
     phone VARCHAR(20) UNIQUE COMMENT '电话（唯一）',
     email VARCHAR(100) UNIQUE COMMENT '邮箱（唯一）',
     hire_date DATE COMMENT '入职日期',
-    qualification TEXT COMMENT '资质',
     password VARCHAR(255) NOT NULL COMMENT '密码',
     status ENUM('active', 'inactive') DEFAULT 'active' COMMENT '状态',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -100,11 +109,28 @@ CREATE TABLE doctors (
     CONSTRAINT chk_doctor_contact CHECK (phone IS NOT NULL OR email IS NOT NULL)
 ) COMMENT='医生表';
 
+-- 科室表
+CREATE TABLE departments (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '科室 ID',
+    code VARCHAR(20) UNIQUE NOT NULL COMMENT '科室代码（如：NK、WK）',
+    name VARCHAR(50) NOT NULL COMMENT '科室名称',
+    description TEXT COMMENT '科室描述',
+    doctor_count INT DEFAULT 0 COMMENT '医生人数',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '是否启用',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY unique_department_code (code),
+    UNIQUE KEY unique_department_name (name)
+) COMMENT='科室表';
+
 -- 院长表
 CREATE TABLE directors (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     employee_id VARCHAR(20) UNIQUE NOT NULL COMMENT '工号',
     name VARCHAR(100) NOT NULL COMMENT '姓名',
+    birthday DATE COMMENT '出生日期',
+    id_card VARCHAR(18) COMMENT '身份证号码',
+    address VARCHAR(200) COMMENT '居住地址',
     phone VARCHAR(20) UNIQUE COMMENT '电话（唯一）',
     email VARCHAR(100) UNIQUE COMMENT '邮箱（唯一）',
     hire_date DATE COMMENT '入职日期',
@@ -120,7 +146,7 @@ CREATE TABLE directors (
 -- 医生排班表
 CREATE TABLE doctor_schedules (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    doctor_id BIGINT NOT NULL COMMENT '医生ID',
+    doctor_id BIGINT NOT NULL COMMENT '医生 ID',
     department VARCHAR(50) NOT NULL COMMENT '科室',
     schedule_date DATE NOT NULL COMMENT '排班日期',
     start_time TIME NOT NULL COMMENT '开始时间',
@@ -132,10 +158,11 @@ CREATE TABLE doctor_schedules (
     UNIQUE KEY unique_doctor_schedule (doctor_id, schedule_date, start_time)
 ) COMMENT='医生排班表';
 
--- 前台排班表
+-- 前台排班表（护士排班表）
 CREATE TABLE receptionist_schedules (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    receptionist_id BIGINT NOT NULL COMMENT '前台ID',
+    receptionist_id BIGINT NOT NULL COMMENT '前台 ID（护士 ID）',
+    department VARCHAR(50) NOT NULL COMMENT '科室',
     schedule_date DATE NOT NULL COMMENT '排班日期',
     start_time TIME NOT NULL COMMENT '开始时间',
     end_time TIME NOT NULL COMMENT '结束时间',
@@ -144,7 +171,7 @@ CREATE TABLE receptionist_schedules (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     FOREIGN KEY (receptionist_id) REFERENCES receptionists(id) ON DELETE CASCADE,
     UNIQUE KEY unique_receptionist_schedule (receptionist_id, schedule_date, start_time)
-) COMMENT='前台排班表';
+) COMMENT='前台排班表（护士排班表）';
 
 -- 预约表
 CREATE TABLE appointments (
@@ -315,34 +342,47 @@ INSERT INTO pets (user_id, name, species, breed, age, gender, weight, medical_hi
 (1, '咪咪', '猫', '英短', 2, 'female', 4.2, '定期驱虫'),
 (2, '小黑', '狗', '拉布拉多', 5, 'male', 35.0, '有关节炎');
 
--- 插入前台信息
-INSERT INTO receptionists (employee_id, name, phone, email, hire_date, password) VALUES
-('QS001', '王前台', '13900139001', 'receptionist1@pethospital.com', '2023-01-15', '123456'),
-('QS002', '李前台', '13900139002', 'receptionist2@pethospital.com', '2022-03-20', '123456');
+-- 插入前台信息（护士）
+INSERT INTO receptionists (employee_id, name, birthday, id_card, address, department, position, phone, email, hire_date, password) VALUES
+('N00001', '王丽丽', '1995-03-15', '110101199503150011', '北京市朝阳区建国路 88 号', '内科', '护士', '13900139001', 'receptionist1@pethospital.com', '2023-01-15', '123456'),
+('N00002', '李小红', '1997-08-22', '110101199708220022', '北京市海淀区中关村大街 100 号', '外科', '护士', '13900139002', 'receptionist2@pethospital.com', '2022-03-20', '123456');
 
 -- 插入医生信息
-INSERT INTO doctors (employee_id, name, department, position, phone, email, hire_date, qualification, password) VALUES
-('YS001', '王建国', '内科', '主治医师', '13900139003', 'doctor1@pethospital.com', '2023-01-15', '执业医师资格证', '123456'),
-('YS002', '李晓明', '外科', '副主任医师', '13900139004', 'doctor2@pethospital.com', '2022-03-20', '副主任医师资格证', '123456'),
-('YS004', '张伟', '内科', '住院医师', '13900139012', 'neike2@pethospital.com', '2023-08-22', '执业医师资格证', '123456'),
-('YS005', '刘芳', '内科', '住院医师', '13900139013', 'neike3@pethospital.com', '2023-09-15', '执业医师资格证', '123456'),
-('YS006', '陈志强', '外科', '主治医师', '13900139014', 'waike2@pethospital.com', '2023-04-10', '执业医师资格证', '123456'),
-('YS007', '赵磊', '外科', '住院医师', '13900139015', 'waike3@pethospital.com', '2023-10-20', '执业医师资格证', '123456');
+INSERT INTO doctors (employee_id, name, birthday, id_card, address, department, position, phone, email, hire_date, password) VALUES
+('D00001', '王建国', '1985-06-15', '110101198506150011', '北京市朝阳区建国路 100 号', '内科', '主治医师', '13900139003', 'doctor1@pethospital.com', '2023-01-15', '123456'),
+('D00002', '李晓明', '1988-11-08', '110101198811080022', '北京市东城区王府井大街 88 号', '外科', '副主任医师', '13900139004', 'doctor2@pethospital.com', '2022-03-20', '123456'),
+('D00003', '张伟', '1990-05-20', '110101199005200033', '北京市西城区西直门内大街 120 号', '内科', '住院医师', '13900139012', 'neike2@pethospital.com', '2023-08-22', '123456'),
+('D00004', '刘芳', '1992-09-10', '110101199209100044', '北京市朝阳区望京街道 66 号', '内科', '住院医师', '13900139013', 'neike3@pethospital.com', '2023-09-15', '123456'),
+('D00005', '陈志强', '1987-03-25', '110101198703250055', '北京市丰台区丰台路 300 号', '外科', '主治医师', '13900139014', 'waike2@pethospital.com', '2023-04-10', '123456'),
+('D00006', '赵磊', '1993-12-18', '110101199312180066', '北京市海淀区海淀路 50 号', '外科', '住院医师', '13900139015', 'waike3@pethospital.com', '2023-10-20', '123456');
 
 -- 插入院长信息
-INSERT INTO directors (employee_id, name, phone, email, hire_date, password) VALUES
-('YZ001', '赵院长', '13900139006', 'director1@pethospital.com', '2020-01-01', '123456');
+INSERT INTO directors (employee_id, name, birthday, id_card, address, phone, email, hire_date, password) VALUES
+('YZ001', '赵院长', '1975-04-10', '110101197504100077', '北京市朝阳区朝阳北路 200 号', '13900139006', 'director1@pethospital.com', '2020-01-01', '123456');
 
 -- 插入医生排班信息
 INSERT INTO doctor_schedules (doctor_id, department, schedule_date, start_time, end_time, shift_type) VALUES
-(1, '内科', '2025-12-01', '09:00:00', '17:00:00', '门诊'),
-(2, '外科', '2025-12-01', '10:00:00', '18:00:00', '手术'),
-(3, '内科', '2025-12-02', '08:00:00', '16:00:00', '门诊');
+(1, '内科', '2025-12-01', '09:00:00', '17:00:00', '白班'),
+(2, '外科', '2025-12-01', '10:00:00', '18:00:00', '白班'),
+(3, '内科', '2025-12-02', '08:00:00', '16:00:00', '白班');
 
--- 插入前台排班信息
-INSERT INTO receptionist_schedules (receptionist_id, schedule_date, start_time, end_time, shift_type) VALUES
-(1, '2025-12-01', '08:00:00', '16:00:00', '早班'),
-(2, '2025-12-01', '16:00:00', '00:00:00', '晚班');
+-- 插入前台排班信息（护士排班）
+INSERT INTO receptionist_schedules (receptionist_id, department, schedule_date, start_time, end_time, shift_type) VALUES
+(1, '内科', '2025-12-01', '08:00:00', '16:00:00', '白班'),
+(2, '外科', '2025-12-01', '16:00:00', '00:00:00', '中班');
+
+-- 插入科室信息
+INSERT INTO departments (code, name, description, doctor_count, is_active) VALUES
+('NK', '内科', '负责内科疾病诊断治疗', 3, TRUE),
+('WK', '外科', '负责外科手术和治疗', 3, TRUE),
+('PFK', '皮肤科', '负责皮肤病诊断治疗', 0, TRUE),
+('YK', '眼科', '负责眼科疾病诊断治疗', 0, TRUE),
+('YK2', '牙科', '负责口腔疾病诊断治疗', 0, TRUE),
+('ZK', '重症监护室', '负责危重病例救治', 0, TRUE),
+('JZK', '急诊科', '负责 24 小时急诊服务', 0, TRUE),
+('YXK', '医学影像科', '负责 X 光、B 超等影像学检查', 0, TRUE),
+('JYK', '检验科', '负责血液、尿液等化验检查', 0, TRUE),
+('YF', '药房', '负责药品管理和发放', 0, TRUE);
 
 -- 插入预约信息
 INSERT INTO appointments (user_id, pet_id, doctor_id, appointment_date, appointment_time, status, reason) VALUES
@@ -376,27 +416,14 @@ INSERT INTO hospital_settings (setting_key, setting_value, description) VALUES
 ('hospital_phone', '010-12345678', '医院电话'),
 ('work_hours', '每天 8:00-18:00', '工作时间');
 
--- 医生排班表查询
+-- 医生表查询
 SELECT 
-    ds.schedule_date AS '日期',
-    d.department AS '科室',
-    d.name AS '医生姓名',
+    d.id AS 'ID',
     d.employee_id AS '工号',
-    ds.shift_type AS '班次类型',
-    ds.start_time AS '开始时间',
-    ds.end_time AS '结束时间'
-FROM doctor_schedules ds
-JOIN doctors d ON ds.doctor_id = d.id
-ORDER BY d.department, ds.schedule_date, ds.start_time;
-
--- 前台排班表查询
-SELECT 
-    rs.schedule_date AS '日期',
-    r.name AS '前台姓名',
-    r.employee_id AS '工号',
-    rs.shift_type AS '班次类型',
-    rs.start_time AS '开始时间',
-    rs.end_time AS '结束时间'
-FROM receptionist_schedules rs
-JOIN receptionists r ON rs.receptionist_id = r.id
-ORDER BY rs.schedule_date, rs.start_time;
+    d.name AS '姓名',
+    d.department AS '科室',
+    d.position AS '职位',
+    d.phone AS '电话',
+    d.email AS '邮箱'
+FROM doctors d
+ORDER BY d.department, d.name;

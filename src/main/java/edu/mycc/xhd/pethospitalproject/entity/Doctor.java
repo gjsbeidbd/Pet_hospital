@@ -10,29 +10,34 @@ public class Doctor {
     private Long id;
     private String employeeId;
     private String name;
+    private String birthday;
+    private String idCard;
+    private String address;
     private String department;
-    private String position;
+    private String position; // 职称（如：住院医师、主治医师等）
     private String phone;
     private String email;
     private String hireDate;
-    private String qualification;
     private String password;
     private String status;
     
     // Constructors
     public Doctor() {}
     
-    public Doctor(Long id, String employeeId, String name, String department, String position, 
-                 String phone, String email, String hireDate, String qualification, String password, String status) {
+    public Doctor(Long id, String employeeId, String name, String birthday, String idCard, String address,
+                 String department, String position, String phone, String email, String hireDate, 
+                 String password, String status) {
         this.id = id;
         this.employeeId = employeeId;
         this.name = name;
+        this.birthday = birthday;
+        this.idCard = idCard;
+        this.address = address;
         this.department = department;
         this.position = position;
         this.phone = phone;
         this.email = email;
         this.hireDate = hireDate;
-        this.qualification = qualification;
         this.password = password;
         this.status = status;
     }
@@ -60,6 +65,30 @@ public class Doctor {
     
     public void setName(String name) {
         this.name = name;
+    }
+    
+    public String getBirthday() {
+        return birthday;
+    }
+    
+    public void setBirthday(String birthday) {
+        this.birthday = birthday;
+    }
+    
+    public String getIdCard() {
+        return idCard;
+    }
+    
+    public void setIdCard(String idCard) {
+        this.idCard = idCard;
+    }
+    
+    public String getAddress() {
+        return address;
+    }
+    
+    public void setAddress(String address) {
+        this.address = address;
     }
     
     public String getDepartment() {
@@ -102,14 +131,6 @@ public class Doctor {
         this.hireDate = hireDate;
     }
     
-    public String getQualification() {
-        return qualification;
-    }
-    
-    public void setQualification(String qualification) {
-        this.qualification = qualification;
-    }
-    
     public String getPassword() {
         return password;
     }
@@ -132,13 +153,12 @@ public class Doctor {
                 "id=" + id +
                 ", employeeId='" + employeeId + '\'' +
                 ", name='" + name + '\'' +
+                ", birthday='" + birthday + '\'' +
+                ", idCard='" + idCard + '\'' +
+                ", address='" + address + '\'' +
                 ", department='" + department + '\'' +
                 ", position='" + position + '\'' +
                 ", phone='" + phone + '\'' +
-                ", email='" + email + '\'' +
-                ", hireDate='" + hireDate + '\'' +
-                ", qualification='" + qualification + '\'' +
-                ", password='" + password + '\'' +
                 ", status='" + status + '\'' +
                 '}';
     }

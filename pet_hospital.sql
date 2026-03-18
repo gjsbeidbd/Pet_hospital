@@ -186,9 +186,10 @@ CREATE TABLE appointments (
     doctor_id BIGINT COMMENT '医生ID',
     appointment_date DATE NOT NULL COMMENT '预约日期',
     appointment_time TIME NOT NULL COMMENT '预约时间',
-    status ENUM('pending', 'confirmed', 'completed', 'cancelled') DEFAULT 'pending' COMMENT '状态',
+    status ENUM('pending', 'waiting', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending' COMMENT '状态',
     reason TEXT COMMENT '预约原因',
     notes TEXT COMMENT '备注',
+    department VARCHAR(50) COMMENT '科室',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -206,6 +207,10 @@ CREATE TABLE medical_records (
     diagnosis TEXT COMMENT '诊断',
     treatment TEXT COMMENT '治疗方案',
     prescription TEXT COMMENT '处方',
+    examination TEXT COMMENT '检查项目',
+    examination_result TEXT COMMENT '检查结果',
+    surgery TEXT COMMENT '手术项目',
+    surgery_result TEXT COMMENT '手术结果',
     notes TEXT COMMENT '备注',
     follow_up_required BOOLEAN DEFAULT FALSE COMMENT '是否需要复诊',
     follow_up_date DATE COMMENT '复诊日期',
@@ -230,6 +235,86 @@ CREATE TABLE drug_inventory (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) COMMENT='药品库存表';
+
+-- 插入药品数据 - 抗生素类
+INSERT INTO drug_inventory (code, name, type, price, stock, unit) VALUES
+('AB001', '阿莫西林胶囊', '抗生素', 25.50, 100, '盒'),
+('AB002', '头孢克肟片', '抗生素', 32.80, 80, '盒'),
+('AB003', '多西环素片', '抗生素', 28.90, 120, '盒'),
+('AB004', '克林霉素胶囊', '抗生素', 45.60, 60, '盒'),
+('AB005', '甲硝唑片', '抗生素', 18.20, 150, '盒');
+
+-- 插入药品数据 - 消炎药类
+INSERT INTO drug_inventory (code, name, type, price, stock, unit) VALUES
+('AN001', '布洛芬片', '消炎药', 15.80, 200, '盒'),
+('AN002', '双氯芬酸钠片', '消炎药', 22.40, 150, '盒'),
+('AN003', '美洛昔康片', '消炎药', 38.90, 100, '盒'),
+('AN004', '泼尼松龙片', '消炎药', 28.50, 120, '盒'),
+('AN005', '地塞米松片', '消炎药', 19.60, 180, '盒');
+
+-- 插入药品数据 - 疫苗类
+INSERT INTO drug_inventory (code, name, type, price, stock, unit) VALUES
+('VA001', '狂犬病疫苗', '疫苗', 120.00, 50, '支'),
+('VA002', '犬瘟热疫苗', '疫苗', 95.00, 60, '支'),
+('VA003', '猫三联疫苗', '疫苗', 110.00, 45, '支'),
+('VA004', '犬细小病毒疫苗', '疫苗', 85.00, 70, '支'),
+('VA005', '猫白血病疫苗', '疫苗', 130.00, 40, '支');
+
+-- 插入药品数据 - 驱虫药类
+INSERT INTO drug_inventory (code, name, type, price, stock, unit) VALUES
+('DE001', '吡喹酮片', '驱虫药', 35.80, 90, '盒'),
+('DE002', '伊维菌素滴剂', '驱虫药', 42.50, 75, '盒'),
+('DE003', '芬苯达唑片', '驱虫药', 28.90, 110, '盒'),
+('DE004', '塞拉菌素滴剂', '驱虫药', 55.00, 65, '盒'),
+('DE005', '米尔贝肟片', '驱虫药', 38.60, 85, '盒');
+
+-- 插入药品数据 - 营养补充剂类
+INSERT INTO drug_inventory (code, name, type, price, stock, unit) VALUES
+('NU001', '复合维生素片', '营养补充剂', 45.80, 120, '瓶'),
+('NU002', '钙片', '营养补充剂', 32.50, 150, '瓶'),
+('NU003', '鱼油软胶囊', '营养补充剂', 68.90, 80, '瓶'),
+('NU004', '益生菌粉', '营养补充剂', 52.40, 100, '盒'),
+('NU005', '关节保健片', '营养补充剂', 75.00, 60, '瓶');
+
+-- 插入药品数据 - 消化系统药类
+INSERT INTO drug_inventory (code, name, type, price, stock, unit) VALUES
+('DI001', '胃复安片', '消化系统药', 18.90, 130, '盒'),
+('DI002', '多潘立酮片', '消化系统药', 22.60, 110, '盒'),
+('DI003', '蒙脱石散', '消化系统药', 15.80, 180, '盒'),
+('DI004', '乳果糖口服液', '消化系统药', 28.40, 95, '瓶'),
+('DI005', '西咪替丁片', '消化系统药', 19.50, 140, '盒');
+
+-- 插入药品数据 - 皮肤病药类
+INSERT INTO drug_inventory (code, name, type, price, stock, unit) VALUES
+('SK001', '酮康唑乳膏', '皮肤病药', 25.80, 100, '支'),
+('SK002', '氯霉素软膏', '皮肤病药', 18.90, 150, '支'),
+('SK003', '红霉素软膏', '皮肤病药', 16.50, 160, '支'),
+('SK004', '硫磺软膏', '皮肤病药', 12.80, 200, '支'),
+('SK005', '特比萘芬乳膏', '皮肤病药', 32.60, 80, '支');
+
+-- 插入药品数据 - 眼药水类
+INSERT INTO drug_inventory (code, name, type, price, stock, unit) VALUES
+('EY001', '氯霉素眼药水', '眼药水', 15.80, 120, '支'),
+('EY002', '妥布霉素眼药水', '眼药水', 22.90, 90, '支'),
+('EY003', '氧氟沙星眼药水', '眼药水', 19.60, 110, '支'),
+('EY004', '利福平眼药水', '眼药水', 28.40, 75, '支'),
+('EY005', '人工泪液', '眼药水', 32.50, 85, '支');
+
+-- 插入药品数据 - 耳药类
+INSERT INTO drug_inventory (code, name, type, price, stock, unit) VALUES
+('EA001', '耳康滴耳液', '耳药', 28.90, 95, '瓶'),
+('EA002', '耳肤灵', '耳药', 45.60, 70, '支'),
+('EA003', '硼酸冰片滴耳液', '耳药', 18.50, 130, '瓶'),
+('EA004', '氧氟沙星滴耳液', '耳药', 22.80, 100, '瓶'),
+('EA005', '氯霉素滴耳液', '耳药', 16.90, 140, '瓶');
+
+-- 插入药品数据 - 麻醉药类
+INSERT INTO drug_inventory (code, name, type, price, stock, unit) VALUES
+('AE001', '异氟烷', '麻醉药', 280.00, 20, '瓶'),
+('AE002', '丙泊酚注射液', '麻醉药', 150.00, 30, '支'),
+('AE003', '氯胺酮注射液', '麻醉药', 95.00, 25, '支'),
+('AE004', '地西泮注射液', '麻醉药', 68.90, 35, '支'),
+('AE005', '阿托品注射液', '麻醉药', 42.50, 40, '支');
 
 -- 账单表
 CREATE TABLE billing (
@@ -433,25 +518,12 @@ INSERT INTO departments (code, name, description, doctor_count, is_active) VALUE
 ('JYK', '检验科', '负责血液、尿液等化验检查', 2, TRUE),
 ('YF', '药房', '负责药品管理和发放', 2, TRUE);
 
--- 插入预约信息
-INSERT INTO appointments (user_id, pet_id, doctor_id, appointment_date, appointment_time, status, reason) VALUES
-(1, 1, 1, '2025-12-01', '09:30:00', 'confirmed', '常规体检'),
-(2, 3, 2, '2025-12-01', '10:30:00', 'pending', '关节炎复查');
-
--- 插入病历信息
-INSERT INTO medical_records (pet_id, doctor_id, appointment_id, visit_date, diagnosis, treatment, prescription) VALUES
-(1, 1, 1, '2025-12-01', '健康状况良好', '建议定期体检', '维生素片 1盒');
-
 -- 插入药品库存信息
 INSERT INTO drug_inventory (code, name, type, price, stock, warning_stock, unit, is_active) VALUES
 ('D001', '阿莫西林', '抗生素', 25.00, 120, 20, '盒', TRUE),
 ('D002', '狂犬疫苗', '疫苗', 80.00, 8, 10, '支', TRUE),
 ('D003', '伊丽莎白圈', '耗材', 15.00, 50, 15, '个', TRUE),
 ('D004', '体内驱虫片', '驱虫药', 45.00, 15, 20, '粒', FALSE);
-
--- 插入账单信息
-INSERT INTO billing (user_id, appointment_id, amount, status, payment_method, description) VALUES
-(1, 1, 150.00, 'paid', '微信支付', '常规体检费用');
 
 -- 插入公告信息
 INSERT INTO announcements (title, content, author, is_active) VALUES

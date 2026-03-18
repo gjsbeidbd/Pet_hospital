@@ -108,7 +108,35 @@ public class AuthController {
         response.put("token", token);
         response.put("role", role);
         response.put("userId", userId);
+        
+        // 如果是前台人员，返回科室信息
+        if ("RECEPTIONIST".equals(role)) {
+            Receptionist receptionist = receptionistService.getById(userId);
+            if (receptionist != null && receptionist.getDepartment() != null) {
+                response.put("department", receptionist.getDepartment());
+            }
+        }
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/receptionist/{id}")
+    public ResponseEntity<Receptionist> getReceptionistInfo(@PathVariable Long id) {
+        Receptionist receptionist = receptionistService.getById(id);
+        if (receptionist != null) {
+            return ResponseEntity.ok(receptionist);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/doctor/{id}")
+    public ResponseEntity<Doctor> getDoctorInfo(@PathVariable Long id) {
+        Doctor doctor = doctorService.getById(id);
+        if (doctor != null) {
+            return ResponseEntity.ok(doctor);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

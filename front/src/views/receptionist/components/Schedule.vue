@@ -1,246 +1,381 @@
 <template>
-  <div class="schedule-wrapper">
-    <el-card class="schedule-card">
+  <div class="schedule-page">
+    <el-card shadow="never" class="top-card">
       <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>前台排班表</span>
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <el-date-picker
-              v-model="selectedDate"
-              type="date"
-              placeholder="选择日期"
-              format="YYYY年MM月DD日"
-              value-format="YYYY-MM-DD"
-              @change="updateScheduleData"
-            />
-            <span>{{ formatDateRange() }}</span>
-            <el-button type="primary" @click="openLeaveDialog">申请请假</el-button>
+        <div class="header-content">
+          <span class="page-title">我的排班</span>
+          <div class="month-nav">
+            <el-button @click="prevMonth" :icon="ArrowLeft" circle size="small" />
+            <span class="current-month">{{ currentYear }}年{{ currentMonth }}月</span>
+            <el-button @click="nextMonth" :icon="ArrowRight" circle size="small" />
           </div>
         </div>
       </template>
-      <el-table :data="scheduleData" border style="width: 100%;">
-        <el-table-column prop="time" label="时间段" width="100"></el-table-column>
-        <el-table-column v-for="day in weekdays" :key="day.key" :label="day.label">
-          <template #header>{{ day.label }}</template>
-          <template #default="scope">
-            <div :class="['schedule-cell', getClassByShift(scope.row.time)]">
-              {{ scope.row[day.key] }}
-              <el-tag v-if="scope.row[day.key] === '休息'" size="small" type="info" style="margin-left: 5px;">休息</el-tag>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
 
-    <!-- 请假申请弹窗 -->
-    <el-dialog v-model="leaveDialogVisible" title="请假申请" width="500px">
-      <el-form :model="leaveForm" label-width="100px">
-        <el-form-item label="请假类型">
-          <el-select v-model="leaveForm.type" placeholder="请选择请假类型">
-            <el-option label="事假" value="事假"></el-option>
-            <el-option label="病假" value="病假"></el-option>
-            <el-option label="年假" value="年假"></el-option>
-            <el-option label="调休" value="调休"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="开始时间">
-          <el-date-picker
-            v-model="leaveForm.startDate"
-            type="date"
-            placeholder="请选择开始日期"
-            format="YYYY年MM月DD日"
-            value-format="YYYY-MM-DD"
-            style="width: 100%"
-          />
-        </el-form-item>
-        <el-form-item label="结束时间">
-          <el-date-picker
-            v-model="leaveForm.endDate"
-            type="date"
-            placeholder="请选择结束日期"
-            format="YYYY年MM月DD日"
-            value-format="YYYY-MM-DD"
-            style="width: 100%"
-          />
-        </el-form-item>
-        <el-form-item label="请假原因">
-          <el-input
-            v-model="leaveForm.reason"
-            type="textarea"
-            placeholder="请输入请假原因"
-            :rows="3"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="leaveDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitLeave">提交申请</el-button>
-        </span>
-      </template>
-    </el-dialog>
+      <div class="calendar-container" v-loading="isLoading">
+        <div class="calendar-header">
+          <div class="weekday-cell">周日</div>
+          <div class="weekday-cell">周一</div>
+          <div class="weekday-cell">周二</div>
+          <div class="weekday-cell">周三</div>
+          <div class="weekday-cell">周四</div>
+          <div class="weekday-cell">周五</div>
+          <div class="weekday-cell">周六</div>
+        </div>
+
+        <div class="calendar-body">
+          <div
+            v-for="(day, index) in calendarDays"
+            :key="index"
+            class="day-cell"
+            :class="{
+              'other-month': !day.currentMonth,
+              'today': day.isToday,
+              'has-schedule': day.schedule,
+              'weekend': day.isWeekend
+            }"
+          >
+            <div class="day-number">{{ day.dateNum }}</div>
+            <div class="schedule-info" v-if="day.currentMonth">
+              <template v-if="day.schedule">
+                <el-tag size="small" type="success" class="shift-tag">{{ day.schedule.shiftType }}</el-tag>
+                <div class="time-info">{{ day.schedule.startTime?.substring(0, 5) }}-{{ day.schedule.endTime?.substring(0, 5) }}</div>
+              </template>
+              <template v-else>
+                <el-tag size="small" type="info" class="rest-tag">休息</el-tag>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="legend-row">
+        <span class="legend-item"><i class="dot work"></i>上班</span>
+        <span class="legend-item"><i class="dot rest"></i>休息</span>
+        <span class="legend-item"><i class="dot today"></i>今天</span>
+      </div>
+
+      <div class="stats-row" v-if="scheduleList.length > 0">
+        <el-statistic title="本月排班天数" :value="scheduleList.length" />
+        <el-statistic title="休息天数" :value="restDays" />
+      </div>
+    </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { getMyNurseSchedules } from '@/services/api'
 
-// 选择的日期
-const selectedDate = ref(new Date())
+const currentYear = ref(2026)
+const currentMonth = ref(1)
+const scheduleList = ref([])
+const scheduleMap = ref({})
+const isLoading = ref(false)
+const currentNurse = ref(null)
 
-// 星期列表
-const weekdays = ref([])
-
-// 排班数据
-const scheduleData = ref([])
-
-// 请假申请弹窗可见性
-const leaveDialogVisible = ref(false)
-
-// 请假表单数据
-const leaveForm = ref({
-  type: '',
-  startDate: '',
-  endDate: '',
-  reason: ''
+const daysInMonth = computed(() => {
+  return new Date(currentYear.value, currentMonth.value, 0).getDate()
 })
 
-// 根据班次获取样式类
-const getClassByShift = (shift) => {
-  if (shift.includes('白班')) return 'morning'
-  if (shift.includes('中班')) return 'afternoon'
-  if (shift.includes('夜班')) return 'night'
-  return ''
-}
+const restDays = computed(() => {
+  return daysInMonth.value - scheduleList.value.length
+})
 
-// 计算日期范围显示
-const formatDateRange = () => {
-  if (weekdays.value.length === 0) return ''
-  const startDate = weekdays.value[0].date
-  const endDate = weekdays.value[weekdays.value.length - 1].date
-  return `${startDate} 至 ${endDate}`
-}
-
-// 获取一周的日期
-const getWeekDates = (date) => {
-  const currentDate = new Date(date)
-  const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay() // 周日为7
-  const startDate = new Date(currentDate)
-  startDate.setDate(currentDate.getDate() - dayOfWeek + 1) // 本周一
+const calendarDays = computed(() => {
+  const days = []
+  const firstDay = new Date(currentYear.value, currentMonth.value - 1, 1)
+  const startDayOfWeek = firstDay.getDay()
   
-  const dates = []
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(startDate)
-    date.setDate(startDate.getDate() + i)
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const dayLabel = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][i]
-    dates.push({
-      key: dayLabel,
-      label: dayLabel,
-      date: `${date.getFullYear()}-${month}-${day}`
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+  for (let i = 0; i < startDayOfWeek; i++) {
+    const prevMonthDay = new Date(currentYear.value, currentMonth.value - 1, -startDayOfWeek + i + 1)
+    days.push({
+      dateNum: prevMonthDay.getDate(),
+      currentMonth: false,
+      isToday: false,
+      isWeekend: prevMonthDay.getDay() === 0 || prevMonthDay.getDay() === 6,
+      schedule: null
     })
   }
-  return dates
+
+  for (let i = 1; i <= daysInMonth.value; i++) {
+    const dateStr = `${currentYear.value}-${String(currentMonth.value).padStart(2, '0')}-${String(i).padStart(2, '0')}`
+    const dayOfWeek = new Date(currentYear.value, currentMonth.value - 1, i).getDay()
+    days.push({
+      dateNum: i,
+      date: dateStr,
+      currentMonth: true,
+      isToday: dateStr === todayStr,
+      isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+      schedule: scheduleMap.value[dateStr] || null
+    })
+  }
+
+  const totalCells = Math.ceil(days.length / 7) * 7
+  const remaining = totalCells - days.length
+  for (let i = 1; i <= remaining; i++) {
+    days.push({
+      dateNum: i,
+      currentMonth: false,
+      isToday: false,
+      isWeekend: false,
+      schedule: null
+    })
+  }
+
+  return days
+})
+
+const getCurrentNurseFromStorage = () => {
+  const userId = localStorage.getItem('userId')
+  const userRole = localStorage.getItem('userRole')
+  if (userId && userRole === 'RECEPTIONIST') {
+    currentNurse.value = {
+      id: parseInt(userId)
+    }
+    return true
+  }
+  return false
 }
 
-// 更新排班数据
-const updateScheduleData = () => {
-  weekdays.value = getWeekDates(selectedDate.value)
-  
-  // 模拟数据：根据日期生成排班表
-  scheduleData.value = [
-    { time: '白班 (8:00-16:00)', '周一': '李晓红', '周二': '张美华', '周三': '李晓红', '周四': '休息', '周五': '张美华', '周六': '王建国', '周日': '休息' },
-    { time: '中班 (16:00-24:00)', '周一': '张美华', '周二': '李晓红', '周三': '张美华', '周四': '李晓红', '周五': '王建国', '周六': '张美华', '周日': '李晓红' },
-    { time: '夜班 (24:00-8:00)', '周一': '王建国', '周二': '王建国', '周三': '休息', '周四': '张美华', '周五': '李晓红', '周六': '李晓红', '周日': '王建国' },
-  ]
+const fetchMySchedule = async () => {
+  if (!currentNurse.value || !currentNurse.value.id) {
+    ElMessage.warning('请先登录')
+    return
+  }
+
+  isLoading.value = true
+  scheduleList.value = []
+  scheduleMap.value = {}
+
+  try {
+    const startDate = `${currentYear.value}-${String(currentMonth.value).padStart(2, '0')}-01`
+    const endDate = `${currentYear.value}-${String(currentMonth.value).padStart(2, '0')}-${String(daysInMonth.value).padStart(2, '0')}`
+
+    const res = await getMyNurseSchedules(currentNurse.value.id, startDate, endDate)
+
+    if (res.data && res.data.data && Array.isArray(res.data.data)) {
+      scheduleList.value = res.data.data
+      res.data.data.forEach(item => {
+        scheduleMap.value[item.scheduleDate] = item
+      })
+    }
+  } catch (error) {
+    console.error('获取排班失败:', error)
+    ElMessage.error('获取排班信息失败')
+  } finally {
+    isLoading.value = false
+  }
 }
 
-// 打开请假申请弹窗
-const openLeaveDialog = () => {
-  // 重置表单数据
-  leaveForm.value = {
-    type: '',
-    startDate: '',
-    endDate: '',
-    reason: ''
+const prevMonth = () => {
+  if (currentMonth.value === 1) {
+    currentMonth.value = 12
+    currentYear.value--
+  } else {
+    currentMonth.value--
   }
-  leaveDialogVisible.value = true
+  fetchMySchedule()
 }
 
-// 提交请假申请
-const submitLeave = () => {
-  // 表单验证
-  if (!leaveForm.value.type) {
-    ElMessage.error('请选择请假类型')
-    return
+const nextMonth = () => {
+  if (currentMonth.value === 12) {
+    currentMonth.value = 1
+    currentYear.value++
+  } else {
+    currentMonth.value++
   }
-  if (!leaveForm.value.startDate) {
-    ElMessage.error('请选择开始时间')
-    return
-  }
-  if (!leaveForm.value.endDate) {
-    ElMessage.error('请选择结束时间')
-    return
-  }
-  if (!leaveForm.value.reason) {
-    ElMessage.error('请输入请假原因')
-    return
-  }
-  
-  // 这里可以添加实际的后端API调用逻辑
-  console.log('提交请假申请:', leaveForm.value)
-  
-  // 关闭弹窗并显示成功消息
-  leaveDialogVisible.value = false
-  ElMessage.success('请假申请已提交，请等待审批')
+  fetchMySchedule()
 }
 
-// 初始化
-updateScheduleData()
+onMounted(() => {
+  const now = new Date()
+  currentYear.value = now.getFullYear()
+  currentMonth.value = now.getMonth() + 1
+  getCurrentNurseFromStorage()
+  fetchMySchedule()
+})
 </script>
 
 <style scoped>
-.schedule-wrapper {
-  height: 100%;
+.schedule-page {
+  padding: 20px;
+}
+
+.top-card {
+  margin-bottom: 20px;
+}
+
+.header-content {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.schedule-card {
-  flex: 1;
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.month-nav {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 15px;
 }
 
-.schedule-card :deep(.el-card__body) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.schedule-card :deep(.el-table) {
-  flex: 1;
-}
-
-/* 课表样式 */
-.schedule-cell {
-  font-size: 13px;
+.current-month {
+  font-size: 16px;
+  font-weight: 500;
+  color: #409EFF;
+  min-width: 100px;
   text-align: center;
-  padding: 8px 0;
+}
+
+.calendar-container {
+  margin-top: 20px;
   border: 1px solid #EBEEF5;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.schedule-cell.morning {
-  background-color: #E6F0FF;
+.calendar-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #f5f7fa;
+  border-bottom: 1px solid #EBEEF5;
 }
 
-.schedule-cell.afternoon {
-  background-color: #F0FAF0;
+.weekday-cell {
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 600;
+  color: #606266;
+  font-size: 14px;
 }
 
-.schedule-cell.night {
-  background-color: #F0F0F0;
+.calendar-body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.day-cell {
+  min-height: 80px;
+  padding: 8px;
+  border-right: 1px solid #EBEEF5;
+  border-bottom: 1px solid #EBEEF5;
+  background: #fff;
+  transition: background 0.2s;
+}
+
+.day-cell:nth-child(7n) {
+  border-right: none;
+}
+
+.day-cell:hover {
+  background: #f5f7fa;
+}
+
+.day-cell.other-month {
+  background: #fafafa;
+}
+
+.day-cell.other-month .day-number {
+  color: #c0c4cc;
+}
+
+.day-cell.today {
+  background: #ecf5ff;
+}
+
+.day-cell.today .day-number {
+  background: #409EFF;
+  color: #fff;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.day-cell.weekend {
+  background: #fdf6ec;
+}
+
+.day-cell.has-schedule {
+  background: #f0f9eb;
+}
+
+.day-number {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 5px;
+}
+
+.schedule-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shift-tag {
+  width: fit-content;
+}
+
+.rest-tag {
+  width: fit-content;
+}
+
+.time-info {
+  font-size: 12px;
+  color: #909399;
+}
+
+.legend-row {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+  padding: 10px 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.dot.work {
+  background: #67c23a;
+}
+
+.dot.rest {
+  background: #909399;
+}
+
+.dot.today {
+  background: #409EFF;
+}
+
+.stats-row {
+  display: flex;
+  gap: 40px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #EBEEF5;
 }
 </style>

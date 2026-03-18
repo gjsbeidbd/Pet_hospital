@@ -21,4 +21,8 @@ public class ReceptionistScheduleService extends ServiceImpl<ReceptionistSchedul
     public void deleteByDateRange(String startDate, String endDate) {
         receptionistScheduleMapper.deleteByDateRange(startDate, endDate);
     }
+    
+    public List<ReceptionistSchedule> getSchedulesByReceptionistIdAndDateRange(Long receptionistId, String startDate, String endDate) {
+        return receptionistScheduleMapper.findByReceptionistIdAndDateRange(receptionistId, startDate, endDate);
+    }
 }

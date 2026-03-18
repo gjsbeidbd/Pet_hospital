@@ -3,7 +3,7 @@
     <el-card class="customer-profile-card">
       <template #header>
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>客户/宠物档案管理</span>
+          <span>客户/宠物资料管理</span>
           <div style="display: flex; gap: 10px;">
             <el-input placeholder="请输入手机号/宠物名/客户名" style="width: 300px;" v-model="searchKeyword"></el-input>
             <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
@@ -12,24 +12,26 @@
         </div>
       </template>
       
-      <el-table :data="paginatedCustomerList" border>
-        <el-table-column prop="id" label="ID" width="60"></el-table-column>
+      <el-table :data="paginatedCustomerList" border stripe v-loading="loading" style="width: 100%">
+        <el-table-column prop="id" label="ID" width="80"></el-table-column>
         <el-table-column prop="name" label="客户姓名" width="120"></el-table-column>
         <el-table-column prop="phone" label="联系电话" width="150"></el-table-column>
-        <el-table-column prop="pets" label="名下宠物">
+        <el-table-column prop="email" label="邮箱" width="200"></el-table-column>
+        <el-table-column prop="address" label="地址" min-width="200" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="pets" label="名下宠物" width="200">
           <template #default="scope">
-            <el-tag size="small" v-for="p in scope.row.pets" :key="p" style="margin-right: 5px;">{{ p }}</el-tag>
+            <el-tag size="small" v-for="p in scope.row.pets" :key="p.id" style="margin-right: 5px; margin-bottom: 5px;">{{ p.name }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="regDate" label="注册日期"></el-table-column>
-        <el-table-column label="操作" width="120">
+        <el-table-column prop="createdAt" label="注册日期" width="120"></el-table-column>
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="scope">
-            <el-button link type="primary" size="small" @click="openEditProfileDialog(scope.row)">编辑</el-button>
+            <el-button type="primary" size="small" @click="openEditProfileDialog(scope.row)">编辑</el-button>
+            <el-button type="danger" size="small" @click="handleDeleteCustomer(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <!-- 分页组件 -->
       <div class="pagination-container">
         <el-pagination
           v-model:current-page="currentPage"
@@ -56,24 +58,11 @@
       </div>
     </el-card>
 
-    <!-- 弹窗：新建档案 -->
     <el-dialog v-model="newProfileDialogVisible" title="新建客户与宠物档案" width="700px">
       <el-form label-width="80px">
         <el-row :gutter="20">
           <el-col :span="12">
             <el-card header="客户信息" shadow="never">
-              <el-form-item label="头像">
-                <el-upload
-                  class="avatar-uploader"
-                  action="/api/upload"
-                  :show-file-list="false"
-                  :on-success="handleAvatarSuccess"
-                  :before-upload="beforeAvatarUpload"
-                >
-                  <img v-if="customerImageUrl" :src="customerImageUrl" class="avatar" />
-                  <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-                </el-upload>
-              </el-form-item>
               <el-form-item label="账号">
                 <el-input v-model="customerForm.phone" placeholder="请输入手机号">
                   <template #append>
@@ -117,11 +106,9 @@
                         <el-input v-model="petForm.name" placeholder="宠物名字"></el-input>
                       </el-form-item>
                       <el-form-item label="种类">
-                        <el-radio-group v-model="petForm.species">
-                          <el-radio label="狗">狗</el-radio>
-                          <el-radio label="猫">猫</el-radio>
-                          <el-radio label="其他">其他</el-radio>
-                        </el-radio-group>
+                        <el-select v-model="petForm.species" placeholder="请选择种类" style="width: 100%" @change="handleSpeciesChange(index, petForm.species)">
+                          <el-option v-for="s in petSpecies" :key="s.id" :label="s.speciesName" :value="s.speciesName"></el-option>
+                        </el-select>
                       </el-form-item>
                       <el-form-item label="品种">
                         <el-select v-model="petForm.breed" placeholder="请选择品种" style="width: 100%" filterable>
@@ -152,24 +139,11 @@
       </template>
     </el-dialog>
 
-    <!-- 弹窗：编辑档案 -->
     <el-dialog v-model="editProfileDialogVisible" title="编辑客户与宠物档案" width="700px">
       <el-form label-width="80px">
         <el-row :gutter="20">
           <el-col :span="12">
             <el-card header="客户信息" shadow="never">
-              <el-form-item label="头像">
-                <el-upload
-                  class="avatar-uploader"
-                  action="/api/upload"
-                  :show-file-list="false"
-                  :on-success="handleAvatarSuccess"
-                  :before-upload="beforeAvatarUpload"
-                >
-                  <img v-if="editCustomerImageUrl" :src="editCustomerImageUrl" class="avatar" />
-                  <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-                </el-upload>
-              </el-form-item>
               <el-form-item label="账号">
                 <el-input v-model="editCustomerForm.phone" disabled>
                   <template #append>
@@ -213,11 +187,9 @@
                         <el-input v-model="petForm.name" placeholder="宠物名字"></el-input>
                       </el-form-item>
                       <el-form-item label="种类">
-                        <el-radio-group v-model="petForm.species">
-                          <el-radio label="狗">狗</el-radio>
-                          <el-radio label="猫">猫</el-radio>
-                          <el-radio label="其他">其他</el-radio>
-                        </el-radio-group>
+                        <el-select v-model="petForm.species" placeholder="请选择种类" style="width: 100%" @change="handleEditSpeciesChange(index, petForm.species)">
+                          <el-option v-for="s in petSpecies" :key="s.id" :label="s.speciesName" :value="s.speciesName"></el-option>
+                        </el-select>
                       </el-form-item>
                       <el-form-item label="品种">
                         <el-select v-model="petForm.breed" placeholder="请选择品种" style="width: 100%" filterable>
@@ -251,22 +223,21 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Plus, Upload } from '@element-plus/icons-vue'
+import { getAllUsers, getAllPets, getUserInfo, getUserPets, addPet, updatePet, deletePet, deleteUser, getPetSpecies, getPetBreedsBySpeciesId, updateUserInfo, changeUserPassword, registerUser } from '@/services/api'
 
 const emit = defineEmits(['open-new-profile-dialog'])
 
-// 分页相关数据
 const currentPage = ref(1)
 const pageSize = ref(10)
 const searchKeyword = ref('')
+const loading = ref(false)
 
-// 弹窗控制
 const newProfileDialogVisible = ref(false)
 const editProfileDialogVisible = ref(false)
 
-// 客户表单
 const customerForm = reactive({
   name: '',
   phone: '',
@@ -275,7 +246,6 @@ const customerForm = reactive({
   password: ''
 })
 
-// 编辑客户表单
 const editCustomerForm = reactive({
   id: '',
   name: '',
@@ -285,54 +255,34 @@ const editCustomerForm = reactive({
   password: ''
 })
 
-// 宠物表单数组（新建）
 const newPetForms = ref([])
-// 新建宠物表单折叠状态
 const newPetFormCollapsed = ref([])
 
-// 宠物表单数组（编辑）
 const editPetForms = ref([])
-// 编辑宠物表单折叠状态
 const editPetFormCollapsed = ref([])
 
-// 动态品种数据 (与用户端保持一致)
-const breedOptionsMap = {
-  '狗': ['金毛寻回犬', '泰迪/贵宾犬', '柴犬', '柯基', '拉布拉多'],
-  '猫': ['英短蓝猫', '布偶猫', '暹罗猫', '加菲猫', '中华田园猫'],
-  '其他': ['兔子', '仓鼠', '鸟类', '爬行动物']
+const getBreedOptions = (speciesName) => {
+  const species = petSpecies.value.find(s => s.speciesName === speciesName)
+  if (!species) return []
+  return petBreeds.value.filter(b => b.speciesId === species.id).map(b => b.breedName)
 }
 
-// 获取品种选项
-const getBreedOptions = (species) => {
-  return breedOptionsMap[species] || []
-}
-
-// 客户头像
 const customerImageUrl = ref('')
 const editCustomerImageUrl = ref('')
 
-// 模拟数据：客户档案
-const customerList = ref([
-  { id: 101, name: '张三', phone: '13800138000', pets: ['旺财', '小强'], balance: 500, regDate: '2022-01-01' },
-  { id: 102, name: '李四', phone: '13900139000', pets: ['咪咪'], balance: 0, regDate: '2023-05-20' },
-  { id: 103, name: '王五', phone: '13700137000', pets: ['小白', '小黑'], balance: 200, regDate: '2023-01-15' },
-  { id: 104, name: '赵六', phone: '13600136000', pets: ['花花'], balance: 0, regDate: '2023-03-22' },
-  { id: 105, name: '钱七', phone: '13500135000', pets: ['大黄', '二黄'], balance: 1000, regDate: '2022-11-30' },
-  { id: 106, name: '孙八', phone: '13400134000', pets: ['豆豆'], balance: 300, regDate: '2023-07-10' },
-  { id: 107, name: '周九', phone: '13300133000', pets: ['球球'], balance: 0, regDate: '2023-09-05' },
-  { id: 108, name: '吴十', phone: '13200132000', pets: ['毛毛', '绒绒'], balance: 150, regDate: '2023-02-18' }
-])
+const customerList = ref([])
+const allPets = ref([])
+const petSpecies = ref([])
+const petBreeds = ref([])
 
-// 计算当前页的客户数据
 const paginatedCustomerList = computed(() => {
-  // 如果有搜索关键词，先过滤数据
   let filteredList = customerList.value
   if (searchKeyword.value) {
     const keyword = searchKeyword.value.toLowerCase()
     filteredList = customerList.value.filter(customer => 
       customer.name.toLowerCase().includes(keyword) ||
       customer.phone.includes(keyword) ||
-      customer.pets.some(pet => pet.toLowerCase().includes(keyword))
+      customer.pets.some(pet => pet.name.toLowerCase().includes(keyword))
     )
   }
   
@@ -341,7 +291,6 @@ const paginatedCustomerList = computed(() => {
   return filteredList.slice(start, end)
 })
 
-// 分页事件处理
 const handleSizeChange = (val) => {
   pageSize.value = val
   currentPage.value = 1
@@ -351,22 +300,62 @@ const handleCurrentChange = (val) => {
   currentPage.value = val
 }
 
-// 搜索处理
 const handleSearch = () => {
   currentPage.value = 1
 }
 
-// 方法
-// 新建档案 - 打开弹窗
+const fetchData = async () => {
+  loading.value = true
+  try {
+    const [usersRes, petsRes, speciesRes, breedsRes] = await Promise.all([
+      getAllUsers(),
+      getAllPets(),
+      getPetSpecies(),
+      getPetBreedsBySpeciesId('')
+    ])
+    
+    if (usersRes.data && Array.isArray(usersRes.data)) {
+      const users = usersRes.data.filter(user => user.role === 'USER')
+      const pets = petsRes.data || []
+      petSpecies.value = speciesRes.data || []
+      petBreeds.value = breedsRes.data || []
+      
+      customerList.value = users.map(user => {
+        const userPets = pets.filter(pet => pet.userId === user.id)
+        return {
+          id: user.id,
+          name: user.name,
+          phone: user.phone,
+          email: user.email,
+          address: user.address,
+          createdAt: user.createdAt ? user.createdAt.substring(0, 10) : '',
+          pets: userPets.map(pet => ({
+            id: pet.id,
+            name: pet.name,
+            species: pet.species,
+            breed: pet.breed,
+            age: pet.age,
+            weight: pet.weight,
+            medicalHistory: pet.medicalHistory
+          }))
+        }
+      })
+    }
+  } catch (error) {
+    console.error('获取数据失败:', error)
+    ElMessage.error('获取数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
 const openNewProfileDialog = () => {
-  // 重置表单
   customerForm.name = ''
   customerForm.phone = ''
   customerForm.email = ''
   customerForm.address = ''
   customerForm.password = ''
   
-  // 重置宠物表单数组
   newPetForms.value = []
   newPetFormCollapsed.value = []
   
@@ -376,9 +365,7 @@ const openNewProfileDialog = () => {
   emit('open-new-profile-dialog')
 }
 
-// 添加新的宠物表单（新建）
 const addNewPetForm = () => {
-  // 如果已有宠物表单，将最后一个折叠
   if (newPetForms.value.length > 0) {
     newPetFormCollapsed.value[newPetForms.value.length - 1] = true;
   }
@@ -391,24 +378,19 @@ const addNewPetForm = () => {
     weight: null,
     medicalHistory: ''
   })
-  // 添加新宠物时直接展开
   newPetFormCollapsed.value.push(false)
 }
 
-// 删除宠物表单（新建）
 const removeNewPetForm = (index) => {
   newPetForms.value.splice(index, 1)
   newPetFormCollapsed.value.splice(index, 1)
 }
 
-// 切换新建宠物表单的折叠状态
 const toggleNewPetForm = (index) => {
   newPetFormCollapsed.value[index] = !newPetFormCollapsed.value[index]
 }
 
-// 添加新的宠物表单（编辑）
 const addEditPetForm = () => {
-  // 如果已有宠物表单，将最后一个折叠
   if (editPetForms.value.length > 0) {
     editPetFormCollapsed.value[editPetForms.value.length - 1] = true;
   }
@@ -421,24 +403,27 @@ const addEditPetForm = () => {
     weight: null,
     medicalHistory: ''
   })
-  // 添加新宠物时直接展开
   editPetFormCollapsed.value.push(false)
 }
 
-// 删除宠物表单（编辑）
 const removeEditPetForm = (index) => {
   editPetForms.value.splice(index, 1)
   editPetFormCollapsed.value.splice(index, 1)
 }
 
-// 切换编辑宠物表单的折叠状态
 const toggleEditPetForm = (index) => {
   editPetFormCollapsed.value[index] = !editPetFormCollapsed.value[index]
 }
 
-// 编辑档案 - 打开弹窗
+const handleSpeciesChange = (index, species) => {
+  newPetForms.value[index].breed = ''
+}
+
+const handleEditSpeciesChange = (index, species) => {
+  editPetForms.value[index].breed = ''
+}
+
 const openEditProfileDialog = (customer) => {
-  // 填充表单数据
   editCustomerForm.id = customer.id
   editCustomerForm.name = customer.name
   editCustomerForm.phone = customer.phone
@@ -446,20 +431,19 @@ const openEditProfileDialog = (customer) => {
   editCustomerForm.address = customer.address || ''
   editCustomerForm.password = ''
   
-  // 初始化宠物表单数组（这里简化处理，实际应该从后端获取宠物详细信息）
   editPetForms.value = []
   editPetFormCollapsed.value = []
   if (customer.pets && customer.pets.length > 0) {
-    customer.pets.forEach(petName => {
+    customer.pets.forEach(pet => {
       editPetForms.value.push({
-        name: petName,
-        species: '狗', // 默认值
-        breed: '', // 默认值
-        age: null,
-        weight: null,
-        medicalHistory: ''
+        id: pet.id,
+        name: pet.name,
+        species: pet.species || '狗',
+        breed: pet.breed || '',
+        age: pet.age,
+        weight: pet.weight,
+        medicalHistory: pet.medicalHistory || ''
       })
-      // 默认折叠所有表单
       editPetFormCollapsed.value.push(true)
     })
   }
@@ -469,17 +453,14 @@ const openEditProfileDialog = (customer) => {
   editProfileDialogVisible.value = true
 }
 
-// 头像上传成功处理
 const handleAvatarSuccess = (response, uploadFile) => {
   customerImageUrl.value = URL.createObjectURL(uploadFile.raw)
 }
 
-// 编辑时头像上传成功处理
 const handleEditAvatarSuccess = (response, uploadFile) => {
   editCustomerImageUrl.value = URL.createObjectURL(uploadFile.raw)
 }
 
-// 上传前检查
 const beforeAvatarUpload = (rawFile) => {
   if (rawFile.type !== 'image/jpeg' && rawFile.type !== 'image/png') {
     ElMessage.error('头像图片只能是 JPG 或 PNG 格式!')
@@ -491,64 +472,151 @@ const beforeAvatarUpload = (rawFile) => {
   return true
 }
 
-// 处理创建档案
-const handleCreateProfile = () => {
+const handleCreateProfile = async () => {
   if (!customerForm.phone || !customerForm.name || !customerForm.password) {
     return ElMessage.error('请填写完整的客户信息')
   }
   
-  // 验证宠物信息
+  if (customerForm.phone.length !== 11) {
+    return ElMessage.error('手机号必须为11位')
+  }
+  
   for (let i = 0; i < newPetForms.value.length; i++) {
-    const petForm = newPetForms.value[i]
-    if (!petForm.name || !petForm.breed) {
-      return ElMessage.error(`请填写第${i + 1}个宠物的完整信息`)
+    if (!newPetForms.value[i].name) {
+      return ElMessage.error(`请填写第 ${i + 1} 个宠物的名字`)
     }
   }
   
-  // 添加新客户到列表
-  const newCustomer = {
-    id: customerList.value.length > 0 ? Math.max(...customerList.value.map(c => c.id)) + 1 : 101,
-    name: customerForm.name,
-    phone: customerForm.phone,
-    email: customerForm.email,
-    address: customerForm.address,
-    pets: newPetForms.value.map(pet => pet.name),
-    balance: 0,
-    regDate: new Date().toISOString().split('T')[0]
+  try {
+    loading.value = true
+    
+    const userData = {
+      phone: customerForm.phone,
+      email: customerForm.email,
+      password: customerForm.password,
+      name: customerForm.name,
+      address: customerForm.address,
+      role: 'USER'
+    }
+    
+    const userRes = await registerUser(userData)
+    const userId = userRes.data.id
+    
+    for (const petForm of newPetForms.value) {
+      const petData = {
+        userId: userId,
+        name: petForm.name,
+        species: petForm.species,
+        breed: petForm.breed,
+        age: petForm.age,
+        weight: petForm.weight,
+        medicalHistory: petForm.medicalHistory
+      }
+      await addPet(petData)
+    }
+    
+    ElMessage.success('新建档案成功')
+    newProfileDialogVisible.value = false
+    fetchData()
+  } catch (error) {
+    console.error('新建档案失败:', error)
+    ElMessage.error('新建档案失败')
+  } finally {
+    loading.value = false
   }
-  customerList.value.push(newCustomer)
-  
-  ElMessage.success('档案创建成功！')
-  newProfileDialogVisible.value = false
 }
 
-// 处理更新档案
-const handleUpdateProfile = () => {
+const handleUpdateProfile = async () => {
   if (!editCustomerForm.name) {
     return ElMessage.error('请填写客户姓名')
   }
   
-  // 验证宠物信息
-  for (let i = 0; i < editPetForms.value.length; i++) {
-    const petForm = editPetForms.value[i]
-    if (!petForm.name || !petForm.breed) {
-      return ElMessage.error(`请填写第${i + 1}个宠物的完整信息`)
+  try {
+    loading.value = true
+    
+    const userId = editCustomerForm.id
+    
+    const userData = {
+      name: editCustomerForm.name,
+      email: editCustomerForm.email,
+      address: editCustomerForm.address
     }
+    
+    await updateUserInfo(userId, userData)
+    
+    if (editCustomerForm.password) {
+      await changeUserPassword(userId, {
+        oldPassword: '',
+        newPassword: editCustomerForm.password
+      })
+    }
+    
+    const existingPetIds = []
+    for (const petForm of editPetForms.value) {
+      const petData = {
+        userId: userId,
+        name: petForm.name,
+        species: petForm.species,
+        breed: petForm.breed,
+        age: petForm.age,
+        weight: petForm.weight,
+        medicalHistory: petForm.medicalHistory
+      }
+      
+      if (petForm.id) {
+        await updatePet(petForm.id, petData)
+        existingPetIds.push(petForm.id)
+      } else {
+        await addPet(petData)
+      }
+    }
+    
+    const currentPets = await getUserPets(userId)
+    if (currentPets.data && Array.isArray(currentPets.data)) {
+      for (const pet of currentPets.data) {
+        if (!existingPetIds.includes(pet.id)) {
+          await deletePet(pet.id, userId)
+        }
+      }
+    }
+    
+    ElMessage.success('编辑档案成功')
+    editProfileDialogVisible.value = false
+    fetchData()
+  } catch (error) {
+    console.error('编辑档案失败:', error)
+    ElMessage.error('编辑档案失败')
+  } finally {
+    loading.value = false
   }
-  
-  // 更新客户列表中的数据
-  const index = customerList.value.findIndex(customer => customer.id === editCustomerForm.id)
-  if (index !== -1) {
-    customerList.value[index].name = editCustomerForm.name
-    customerList.value[index].email = editCustomerForm.email
-    customerList.value[index].address = editCustomerForm.address
-    // 更新宠物信息
-    customerList.value[index].pets = editPetForms.value.map(pet => pet.name)
-  }
-  
-  ElMessage.success('档案更新成功！')
-  editProfileDialogVisible.value = false
 }
+
+const handleDeleteCustomer = (customer) => {
+  ElMessageBox.confirm(
+    `确定要删除客户"${customer.name}"吗？删除后该客户及其名下所有宠物数据将被永久删除。`,
+    '删除确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    try {
+      await deleteUser(customer.id)
+      ElMessage.success('删除成功')
+      fetchData()
+    } catch (error) {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }).catch(() => {
+    // 用户取消删除
+  })
+}
+
+onMounted(() => {
+  fetchData()
+})
 </script>
 
 <style scoped>
@@ -570,43 +638,41 @@ const handleUpdateProfile = () => {
   flex-direction: column;
 }
 
-.customer-profile-card :deep(.el-table) {
-  flex: 1;
-}
-
 .pagination-container {
+  margin-top: 20px;
   display: flex;
   justify-content: center;
-  padding: 20px 0;
 }
 
-.avatar-uploader .avatar {
-  width: 120px;
-  height: 120px;
-  display: block;
-  border: 2px dashed #ccc;
-  border-radius: 6px;
+.avatar-uploader {
+  text-align: center;
 }
-.avatar-uploader .el-upload {
-  border: 2px dashed var(--el-border-color);
+
+.avatar-uploader :deep(.el-upload) {
+  border: 1px dashed #d9d9d9;
   border-radius: 6px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: var(--el-transition-duration-fast);
-  width: 120px;
-  height: 120px;
+  transition: border-color 0.3s;
 }
-.avatar-uploader .el-upload:hover {
-  border-color: var(--el-color-primary);
+
+.avatar-uploader :deep(.el-upload:hover) {
+  border-color: #409EFF;
 }
+
 .avatar-uploader-icon {
   font-size: 28px;
   color: #8c939d;
-  width: 120px;
-  height: 120px;
+  width: 178px;
+  height: 178px;
+  line-height: 178px;
   text-align: center;
-  border: 2px dashed #ccc;
-  border-radius: 6px;
+}
+
+.avatar {
+  width: 178px;
+  height: 178px;
+  display: block;
 }
 </style>

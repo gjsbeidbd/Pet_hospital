@@ -22,8 +22,12 @@ public class PetBreedController {
      * 根据种类 ID 获取品种列表
      */
     @GetMapping
-    public List<PetBreed> getBreedsBySpeciesId(@RequestParam Long speciesId) {
-        return petBreedService.getBreedsBySpeciesId(speciesId);
+    public List<PetBreed> getBreedsBySpeciesId(@RequestParam(required = false) Long speciesId) {
+        if (speciesId != null) {
+            return petBreedService.getBreedsBySpeciesId(speciesId);
+        } else {
+            return petBreedService.list();
+        }
     }
     
     /**

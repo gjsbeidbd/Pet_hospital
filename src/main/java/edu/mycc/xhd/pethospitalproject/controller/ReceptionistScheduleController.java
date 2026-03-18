@@ -98,6 +98,27 @@ public class ReceptionistScheduleController {
     }
     
     /**
+     * 根据护士ID和日期范围获取排班
+     */
+    @GetMapping("/receptionist/{receptionistId}")
+    public Map<String, Object> getSchedulesByReceptionistIdAndDateRange(
+        @PathVariable Long receptionistId,
+        @RequestParam String startDate,
+        @RequestParam String endDate
+    ) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            List<ReceptionistSchedule> schedules = receptionistScheduleService.getSchedulesByReceptionistIdAndDateRange(receptionistId, startDate, endDate);
+            result.put("code", "0");
+            result.put("data", schedules);
+        } catch (Exception e) {
+            result.put("code", "500");
+            result.put("message", e.getMessage());
+        }
+        return result;
+    }
+    
+    /**
      * 删除排班
      */
     @DeleteMapping("/{id}")

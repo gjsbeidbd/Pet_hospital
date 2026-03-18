@@ -49,6 +49,35 @@ export const getUserInfo = (userId) => {
   return api.get(`/api/users/${userId}`);
 };
 
+// 获取前台信息
+export const getReceptionistInfo = (receptionistId) => {
+  return api.get(`/api/auth/receptionist/${receptionistId}`);
+};
+
+export const getDoctorInfo = (doctorId) => {
+  return api.get(`/api/auth/doctor/${doctorId}`);
+};
+
+// 获取所有用户（客户）
+export const getAllUsers = () => {
+  return api.get('/api/users');
+};
+
+// 注册新用户
+export const registerUser = (userData) => {
+  return api.post('/api/users', userData);
+};
+
+// 删除用户
+export const deleteUser = (userId) => {
+  return api.delete(`/api/users/${userId}`);
+};
+
+// 获取所有宠物
+export const getAllPets = () => {
+  return api.get('/api/pets');
+};
+
 // 获取院长信息
 export const getDirectorInfo = (directorId) => {
   return api.get(`/api/directors/${directorId}`);
@@ -123,6 +152,16 @@ export const getMedicalRecordsByDoctorId = (doctorId) => {
   return api.get(`/api/medical-records/doctor?doctorId=${doctorId}`);
 };
 
+// 添加病历
+export const addMedicalRecord = (medicalRecordData) => {
+  return api.post('/api/medical-records', medicalRecordData);
+};
+
+// 更新病历
+export const updateMedicalRecord = (id, medicalRecordData) => {
+  return api.put(`/api/medical-records/${id}`, medicalRecordData);
+};
+
 // ==================== 排班管理相关 ====================
 
 // 获取医生排班信息（按科室和日期范围）
@@ -141,6 +180,13 @@ export const getAllDoctorSchedules = (startDate, endDate) => {
 export const getMyDoctorSchedules = (doctorId, startDate, endDate) => {
   return api.get(`/api/doctor-schedules/doctor/${doctorId}`, { 
     params: { startDate, endDate } 
+  });
+};
+
+// 根据日期和科室获取值班医生 ID 列表
+export const getOnDutyDoctorsByDateAndDepartment = (date, department) => {
+  return api.get('/api/doctor-schedules/on-duty/doctors', { 
+    params: { date, department } 
   });
 };
 
@@ -167,6 +213,13 @@ export const getReceptionistSchedules = (params) => {
 // 获取所有护士排班信息（按日期范围）
 export const getAllNurseSchedules = (startDate, endDate) => {
   return api.get('/api/receptionist-schedules/date-range', { 
+    params: { startDate, endDate } 
+  });
+};
+
+// 获取护士自己的排班信息
+export const getMyNurseSchedules = (receptionistId, startDate, endDate) => {
+  return api.get(`/api/receptionist-schedules/receptionist/${receptionistId}`, { 
     params: { startDate, endDate } 
   });
 };
@@ -349,5 +402,55 @@ export const getAllDoctors = () => {
 };
 
 // ==================== 排班管理相关 ====================
+
+// ==================== 预约管理相关 ====================
+
+// 获取用户预约列表
+export const getUserAppointments = (userId) => {
+  return api.get(`/api/appointments?userId=${userId}`);
+};
+
+// 创建新预约
+export const createAppointment = (appointmentData) => {
+  return api.post('/api/appointments', appointmentData);
+};
+
+// 取消预约
+export const cancelAppointment = (appointmentId) => {
+  return api.put(`/api/appointments/${appointmentId}/cancel`);
+};
+
+// 获取预约详情
+export const getAppointmentById = (appointmentId) => {
+  return api.get(`/api/appointments/${appointmentId}`);
+};
+
+// 获取所有预约（用于前台/医生查看）
+export const getAllAppointments = () => {
+  return api.get('/api/appointments/all');
+};
+
+// 根据科室获取所有预约（用于前台）
+export const getAllAppointmentsByDepartment = (department) => {
+  return api.get('/api/appointments/all-by-department?department=' + encodeURIComponent(department));
+};
+
+// 更新预约状态
+export const updateAppointmentStatus = (appointmentId, status) => {
+  return api.put(`/api/appointments/${appointmentId}/status?status=${status}`);
+};
+
+// 前台取号
+export const takeNumber = (appointmentId) => {
+  return api.put(`/api/appointments/${appointmentId}/take-number`);
+};
+
+export const startConsultation = (appointmentId, doctorId) => {
+  return api.put(`/api/appointments/${appointmentId}/start-consultation?doctorId=${doctorId}`);
+};
+
+export const finishConsultation = (appointmentId, doctorId) => {
+  return api.put(`/api/appointments/${appointmentId}/finish-consultation?doctorId=${doctorId}`);
+};
 
 export default api;

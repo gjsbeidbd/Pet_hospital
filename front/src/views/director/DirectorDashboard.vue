@@ -46,7 +46,7 @@ const menuList = [
   },
   {
     index: '3',
-    title: '排班管理',
+    title: '员工排班管理',
     icon: 'Calendar',
     children: [
       {

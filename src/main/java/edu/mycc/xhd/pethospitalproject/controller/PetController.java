@@ -22,9 +22,14 @@ public class PetController {
      * @return 宠物列表
      */
     @GetMapping
-    public ResponseEntity<List<Pet>> getPetsByUserId(@RequestParam Long userId) {
-        List<Pet> pets = petService.getPetsByUserId(userId);
-        return ResponseEntity.ok(pets);
+    public ResponseEntity<List<Pet>> getPetsByUserId(@RequestParam(required = false) Long userId) {
+        if (userId != null) {
+            List<Pet> pets = petService.getPetsByUserId(userId);
+            return ResponseEntity.ok(pets);
+        } else {
+            List<Pet> allPets = petService.getAllPets();
+            return ResponseEntity.ok(allPets);
+        }
     }
 
     /**

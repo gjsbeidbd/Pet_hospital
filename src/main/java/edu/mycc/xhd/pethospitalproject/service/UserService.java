@@ -5,6 +5,8 @@ import edu.mycc.xhd.pethospitalproject.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class UserService {
 
@@ -64,6 +66,45 @@ public class UserService {
     }
 
     /**
+     * 注册新用户（完整信息）
+     *
+     * @param phone 手机号
+     * @param email 邮箱
+     * @param password 密码
+     * @param name 姓名
+     * @param address 地址
+     * @param role 角色
+     * @return 是否注册成功
+     */
+    public User registerWithDetails(String phone, String email, String password, String name, String address, String role) {
+        // 检查手机号是否已存在
+        if (phone != null && !phone.isEmpty() && userMapper.countByPhone(phone) > 0) {
+            return null;
+        }
+        
+        // 检查邮箱是否已存在
+        if (email != null && !email.isEmpty() && userMapper.countByEmail(email) > 0) {
+            return null;
+        }
+
+        // 创建新用户
+        User user = new User();
+        user.setPhone(phone);
+        user.setEmail(email);
+        user.setPassword(password);
+        user.setName(name);
+        user.setAddress(address);
+        user.setRole(role);
+        user.setUsername(phone != null && !phone.isEmpty() ? phone : email);
+        
+        int result = userMapper.insert(user);
+        if (result > 0) {
+            return user;
+        }
+        return null;
+    }
+
+    /**
      * 根据ID获取用户
      *
      * @param id 用户ID
@@ -71,6 +112,10 @@ public class UserService {
      */
     public User getUserById(Long id) {
         return userMapper.selectById(id);
+    }
+
+    public List<User> getAllUsers() {
+        return userMapper.selectList(null);
     }
 
     /**
@@ -97,6 +142,23 @@ public class UserService {
     public boolean changePassword(Long id, String oldPassword, String newPassword) {
         User user = userMapper.selectById(id);
         if (user != null && user.getPassword().equals(oldPassword)) {
+            user.setPassword(newPassword);
+            int result = userMapper.updateById(user);
+            return result > 0;
+        }
+        return false;
+    }
+
+    /**
+     * 管理员修改用户密码（无需旧密码）
+     *
+     * @param id 用户ID
+     * @param newPassword 新密码
+     * @return 是否修改成功
+     */
+    public boolean adminChangePassword(Long id, String newPassword) {
+        User user = userMapper.selectById(id);
+        if (user != null) {
             user.setPassword(newPassword);
             int result = userMapper.updateById(user);
             return result > 0;

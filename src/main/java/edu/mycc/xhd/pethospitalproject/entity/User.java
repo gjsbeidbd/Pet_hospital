@@ -16,6 +16,8 @@ public class User {
     private String address;
     private String image; // 头像图片路径
     private String role; // USER, RECEPTIONIST, DOCTOR, ADMIN
+    private java.time.LocalDateTime createdAt; // 创建时间
+    private java.time.LocalDateTime updatedAt; // 更新时间
 
     // Constructors
     public User() {}
@@ -103,6 +105,22 @@ public class User {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public java.time.LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(java.time.LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public java.time.LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(java.time.LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     @Override

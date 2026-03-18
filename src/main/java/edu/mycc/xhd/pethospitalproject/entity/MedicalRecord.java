@@ -18,6 +18,10 @@ public class MedicalRecord {
     private String diagnosis;
     private String treatment;
     private String prescription;
+    private String examination;
+    private String examinationResult;
+    private String surgery;
+    private String surgeryResult;
     private String notes;
     private Boolean followUpRequired;
     private LocalDate followUpDate;
@@ -28,7 +32,7 @@ public class MedicalRecord {
     public MedicalRecord() {}
 
     public MedicalRecord(Long id, Long petId, Long doctorId, Long appointmentId, LocalDate visitDate, 
-                        String diagnosis, String treatment, String prescription, String notes, 
+                        String diagnosis, String treatment, String prescription, String examination, String examinationResult, String surgery, String surgeryResult, String notes, 
                         Boolean followUpRequired, LocalDate followUpDate, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.petId = petId;
@@ -38,6 +42,10 @@ public class MedicalRecord {
         this.diagnosis = diagnosis;
         this.treatment = treatment;
         this.prescription = prescription;
+        this.examination = examination;
+        this.examinationResult = examinationResult;
+        this.surgery = surgery;
+        this.surgeryResult = surgeryResult;
         this.notes = notes;
         this.followUpRequired = followUpRequired;
         this.followUpDate = followUpDate;
@@ -110,6 +118,38 @@ public class MedicalRecord {
         this.prescription = prescription;
     }
 
+    public String getExamination() {
+        return examination;
+    }
+
+    public void setExamination(String examination) {
+        this.examination = examination;
+    }
+
+    public String getExaminationResult() {
+        return examinationResult;
+    }
+
+    public void setExaminationResult(String examinationResult) {
+        this.examinationResult = examinationResult;
+    }
+
+    public String getSurgery() {
+        return surgery;
+    }
+
+    public void setSurgery(String surgery) {
+        this.surgery = surgery;
+    }
+
+    public String getSurgeryResult() {
+        return surgeryResult;
+    }
+
+    public void setSurgeryResult(String surgeryResult) {
+        this.surgeryResult = surgeryResult;
+    }
+
     public String getNotes() {
         return notes;
     }
@@ -161,6 +201,10 @@ public class MedicalRecord {
                 ", diagnosis='" + diagnosis + '\'' +
                 ", treatment='" + treatment + '\'' +
                 ", prescription='" + prescription + '\'' +
+                ", examination='" + examination + '\'' +
+                ", examinationResult='" + examinationResult + '\'' +
+                ", surgery='" + surgery + '\'' +
+                ", surgeryResult='" + surgeryResult + '\'' +
                 ", notes='" + notes + '\'' +
                 ", followUpRequired=" + followUpRequired +
                 ", followUpDate=" + followUpDate +

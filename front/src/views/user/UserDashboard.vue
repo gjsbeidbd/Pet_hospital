@@ -22,7 +22,7 @@
 
     <!-- 3. 预约挂号 -->
     <div v-if="activeMenu === '3'" class="full-height">
-      <Appointment :appointments="myAppointments" :pets="pets" />
+      <Appointment :pets="pets" />
     </div>
 
     <!-- 4. 病历记录 -->
@@ -56,6 +56,7 @@ import Appointment from './components/Appointment.vue'
 import MedicalRecords from './components/MedicalRecords.vue'
 import Profile from './components/Profile.vue'
 import ChangePassword from './components/ChangePassword.vue'
+import { getUserPets } from '@/services/api'
 
 // Router
 const router = useRouter()
@@ -65,6 +66,7 @@ const layoutRef = ref(null)
 const activeMenu = ref('1')
 const userName = ref('') // 用户名
 const userAvatar = ref('') // 用户头像
+const pets = ref([]) // 用户宠物列表
 
 // 菜单配置
 const menuList = [
@@ -126,12 +128,6 @@ const breedOptionsMap = {
   ]
 }
 
-// 模拟数据：预约记录
-const myAppointments = ref([
-  { date: '2023-11-20 10:00', petName: '旺财', doctor: '王医生', desc: '年度体检', status: '待取号' },
-  { date: '2023-09-15 14:00', petName: '咪咪', doctor: '李医生', desc: '拉肚子', status: '就诊完成' }
-])
-
 // --- Methods ---
 const handleSelect = (key) => {
   activeMenu.value = key
@@ -162,14 +158,20 @@ const fetchUserInfo = async () => {
         avatarUrl = 'http://localhost:8080' + avatarUrl
       }
       userAvatar.value = avatarUrl
+      
+      // 加载用户宠物列表
+      const petsResponse = await getUserPets(userId)
+      pets.value = petsResponse.data || []
     } else {
       userName.value = '用户'
       userAvatar.value = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
+      pets.value = []
     }
   } catch (error) {
     console.error('获取用户信息失败:', error)
     userName.value = '用户'
     userAvatar.value = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
+    pets.value = []
     // ElMessage.error('获取用户信息失败')
   }
 }

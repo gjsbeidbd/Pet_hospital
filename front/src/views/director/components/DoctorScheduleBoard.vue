@@ -315,7 +315,7 @@ const confirmAutoSchedule = async () => {
     if (allSchedules.length === 0) {
       ElMessage.warning('没有可排班的医生')
       return
-    }
+             }
 
     await saveDoctorSchedulesBatch(allSchedules)
     autoScheduleDialogVisible.value = false

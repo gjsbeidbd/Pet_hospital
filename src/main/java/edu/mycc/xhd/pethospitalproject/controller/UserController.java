@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -27,6 +28,29 @@ public class UserController {
         }
     }
 
+    @GetMapping
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
+    }
+
+    @PostMapping
+    public ResponseEntity<User> registerUser(@RequestBody Map<String, String> userData) {
+        String phone = userData.get("phone");
+        String email = userData.get("email");
+        String password = userData.get("password");
+        String name = userData.get("name");
+        String address = userData.get("address");
+        String role = userData.get("role") != null ? userData.get("role") : "USER";
+        
+        User user = userService.registerWithDetails(phone, email, password, name, address, role);
+        if (user != null) {
+            return ResponseEntity.ok(user);
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User updatedUser) {
         boolean success = userService.updateUser(id, updatedUser);
@@ -43,14 +67,20 @@ public class UserController {
         String oldPassword = passwordData.get("oldPassword");
         String newPassword = passwordData.get("newPassword");
         
-        boolean success = userService.changePassword(id, oldPassword, newPassword);
+        boolean success;
+        if (oldPassword == null || oldPassword.isEmpty()) {
+            success = userService.adminChangePassword(id, newPassword);
+        } else {
+            success = userService.changePassword(id, oldPassword, newPassword);
+        }
+        
         Map<String, String> response = new HashMap<>();
         
         if (success) {
             response.put("message", "密码修改成功");
             return ResponseEntity.ok(response);
         } else {
-            response.put("error", "旧密码错误或用户不存在");
+            response.put("error", "密码修改失败");
             return ResponseEntity.badRequest().body(response);
         }
     }

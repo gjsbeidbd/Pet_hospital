@@ -24,7 +24,7 @@
       <Billing @pay-bill="handlePayBill" />
     </div>
 
-    <!-- 4. 客户/宠物档案 -->
+    <!-- 4. 客户资料管理 -->
     <div v-if="activeMenu === '4'" class="full-height">
       <CustomerProfile @open-new-profile-dialog="handleOpenNewProfileDialog" />
     </div>
@@ -50,7 +50,7 @@
 import { ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { useRouter } from 'vue-router';
-import { getUserInfo } from '@/services/api';
+import { getReceptionistInfo } from '@/services/api';
 import Layout from '@/components/Layout.vue';
 
 // 导入子组件
@@ -90,7 +90,7 @@ const menuList = [
   },
   {
     index: '4',
-    title: '客户/宠物档案',
+    title: '客户资料管理',
     icon: 'User'
   },
   {
@@ -170,7 +170,7 @@ const fetchUserInfo = async () => {
   try {
     const userId = localStorage.getItem('userId');
     if (userId) {
-      const response = await getUserInfo(userId);
+      const response = await getReceptionistInfo(userId);
       userName.value = response.data.name || '前台人员';
       // 设置用户头像
       let avatarUrl = response.data.image || 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png';
@@ -178,6 +178,14 @@ const fetchUserInfo = async () => {
         avatarUrl = 'http://localhost:8080' + avatarUrl;
       }
       userAvatar.value = avatarUrl;
+      
+      // 保存科室信息到 localStorage
+      if (response.data.department) {
+        console.log('保存科室信息:', response.data.department)
+        localStorage.setItem('receptionistInfo', JSON.stringify({
+          department: response.data.department
+        }));
+      }
     } else {
       userName.value = '前台人员';
       userAvatar.value = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png';

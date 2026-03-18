@@ -1,28 +1,72 @@
 <template>
   <div class="medical-records-wrapper">
     <el-card class="medical-records-card">
-      <template #header>我的宠物病历档案</template>
+      <template #header>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 18px; font-weight: bold;">我的宠物病历档案</span>
+          <el-input
+            v-model="searchKeyword"
+            placeholder="搜索宠物名称或诊断结果"
+            style="width: 300px;"
+            clearable
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+        </div>
+      </template>
       
       <!-- 病历列表 -->
       <div class="records-list">
-        <el-collapse accordion v-model="activeNames" @change="handleChange">
-          <el-collapse-item 
-            v-for="(record, index) in paginatedRecords" 
-            :key="record.id"
-            :title="record.title" 
-            :name="index">
-            <el-descriptions border :column="2">
-              <el-descriptions-item label="主治医生">{{ record.doctorName || record.doctor || '未知医生' }}</el-descriptions-item>
-              <el-descriptions-item label="就诊时间">{{ formatDate(record.visitDate) }} {{ record.visitTime || '未知时间' }}</el-descriptions-item>
-              <el-descriptions-item label="诊断结果">{{ record.diagnosis || '无诊断信息' }}</el-descriptions-item>
-              <el-descriptions-item label="处方药">{{ record.prescription || '无处方信息' }}</el-descriptions-item>
-              <el-descriptions-item label="医嘱" :span="2">{{ record.treatment || record.notes || '无医嘱信息' }}</el-descriptions-item>
-            </el-descriptions>
-            <div style="margin-top: 15px; text-align: right;">
-              <el-button type="primary" @click="viewDetail(record)">查看详细病历</el-button>
-            </div>
-          </el-collapse-item>
-        </el-collapse>
+        <el-table :data="filteredRecords" border style="width: 100%" class="data-table" empty-text="暂无病历记录">
+          <el-table-column prop="petName" label="宠物名称" width="120" align="center">
+            <template #default="scope">
+              <span style="font-weight: bold;">{{ scope.row.petName || scope.row.title }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="visitDate" label="就诊日期" width="120" align="center">
+            <template #default="scope">
+              <span style="color: #409EFF;">{{ formatDate(scope.row.visitDate) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="doctorName" label="主治医生" width="120" align="center">
+            <template #default="scope">
+              {{ scope.row.doctorName || scope.row.doctor || '未知医生' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="diagnosis" label="诊断结果" min-width="200" show-overflow-tooltip>
+            <template #default="scope">
+              <span v-if="scope.row.diagnosis" style="color: #F56C6C;">{{ scope.row.diagnosis }}</span>
+              <span v-else style="color: #999;">无诊断信息</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="examination" label="检查项目" width="120" align="center">
+            <template #default="scope">
+              <el-tag v-if="scope.row.examination" type="info" size="small">{{ scope.row.examination }}</el-tag>
+              <span v-else style="color: #999;">无</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="surgery" label="手术项目" width="120" align="center">
+            <template #default="scope">
+              <el-tag v-if="scope.row.surgery" type="warning" size="small">{{ scope.row.surgery }}</el-tag>
+              <span v-else style="color: #999;">无</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="prescriptionCount" label="处方药品" width="100" align="center">
+            <template #default="scope">
+              <el-tag v-if="scope.row.prescriptionCount > 0" type="success" size="small">
+                {{ scope.row.prescriptionCount }}种
+              </el-tag>
+              <span v-else style="color: #999;">无</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="120" fixed="right" align="center">
+            <template #default="scope">
+              <el-button type="primary" size="small" @click="viewDetail(scope.row)">查看详情</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
       
       <!-- 分页 -->
@@ -234,6 +278,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { getMedicalRecordsByPetId } from '@/services/api'
 
 // 控制展开的面板
@@ -252,11 +297,28 @@ const pageSize = ref(5)
 // 病历数据
 const medicalRecords = ref([])
 
+// 搜索关键词
+const searchKeyword = ref('')
+
 // 计算当前页的病历数据
 const paginatedRecords = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
   return medicalRecords.value.slice(start, end)
+})
+
+// 搜索过滤后的病历数据
+const filteredRecords = computed(() => {
+  if (!searchKeyword.value) {
+    return paginatedRecords.value
+  }
+  
+  const keyword = searchKeyword.value.toLowerCase()
+  return paginatedRecords.value.filter(record => 
+    (record.petName && record.petName.toLowerCase().includes(keyword)) ||
+    (record.diagnosis && record.diagnosis.toLowerCase().includes(keyword)) ||
+    (record.doctorName && record.doctorName.toLowerCase().includes(keyword))
+  )
 })
 
 // 分页事件处理
@@ -324,19 +386,23 @@ const fetchMedicalRecords = async () => {
     const pets = await petResponse.json()
     
     // 获取每个宠物的病历
-    const allRecords = []
-    for (const pet of pets) {
-      const response = await getMedicalRecordsByPetId(pet.id)
-      const records = response.data.map(record => ({
-        ...record,
-        petName: pet.name,
-        petBreed: pet.breed,
-        petAge: pet.age,
-        petGender: pet.gender,
-        title: `${formatDate(record.visitDate)} | ${pet.name} | ${record.diagnosis || '无诊断'}`
-      }))
-      allRecords.push(...records)
-    }
+      const allRecords = []
+      for (const pet of pets) {
+        const response = await getMedicalRecordsByPetId(pet.id)
+        const records = response.data.map(record => ({
+          ...record,
+          petName: pet.name,
+          petBreed: pet.breed,
+          petAge: pet.age,
+          petGender: pet.gender,
+          title: `${formatDate(record.visitDate)} | ${pet.name} | ${record.diagnosis || '无诊断'}`,
+          // 添加新字段
+          examination: record.examination || '',
+          surgery: record.surgery || '',
+          prescriptionCount: record.prescription ? (JSON.parse(record.prescription).drugs?.length || 0) : 0
+        }))
+        allRecords.push(...records)
+      }
     
     medicalRecords.value = allRecords
   } catch (error) {

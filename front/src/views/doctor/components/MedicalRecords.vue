@@ -25,14 +25,9 @@
           <el-table-column prop="visitTime" label="就诊时间" width="180"></el-table-column>
           <el-table-column prop="doctor" label="主治医生" width="120"></el-table-column>
           <el-table-column prop="diagnosis" label="诊断结果"></el-table-column>
-          <el-table-column prop="status" label="状态" width="100">
-            <template #default="scope">
-              <el-tag :type="getStatusType(scope.row.status)">{{ scope.row.status }}</el-tag>
-            </template>
-          </el-table-column>
           <el-table-column label="操作" width="120">
             <template #default="scope">
-              <el-button link type="primary" size="small" @click="viewDetail(scope.row)">查看详情</el-button>
+              <el-button type="primary" size="small" @click="viewDetail(scope.row)">查看详情</el-button>
             </template>
           </el-table-column>
         </el-table>

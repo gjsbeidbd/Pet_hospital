@@ -22,6 +22,10 @@ public class PetService {
         return petMapper.selectByUserId(userId);
     }
 
+    public List<Pet> getAllPets() {
+        return petMapper.selectList(null);
+    }
+
     /**
      * 添加宠物
      * @param pet 宠物信息

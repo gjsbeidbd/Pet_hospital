@@ -57,9 +57,9 @@
           <template #default="scope">
             <el-tag v-if="scope.row.status === '待取号'" type="info">待取号</el-tag>
             <el-tag v-else-if="scope.row.status === '待就诊'" type="warning">待就诊</el-tag>
-            <el-tag v-else-if="scope.row.status === '就诊中'" type="primary">就诊中</el-tag>
+            <el-tag v-else-if="scope.row.status === '正在就诊'" type="primary">正在就诊</el-tag>
             <el-tag v-else-if="scope.row.status === '就诊完成'" type="success">就诊完成</el-tag>
-            <el-tag v-else type="info">等待叫号</el-tag>
+            <el-tag v-else type="info">待就诊</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="150">
@@ -99,37 +99,74 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { 
   Timer, 
   Checked, 
   Money, 
   UserFilled 
 } from '@element-plus/icons-vue'
+import { getAllAppointments, getAllAppointmentsByDepartment, takeNumber, getReceptionistInfo } from '@/services/api'
 
 // 分页相关数据
 const currentPage = ref(1)
 const pageSize = ref(10)
 
-// 模拟数据：候诊队列
-const queueData = ref([
-  { no: 'A001', petName: '豆豆', owner: '张伟', doctor: '王医生', status: '待就诊' },
-  { no: 'A002', petName: '雪球', owner: '刘洋', doctor: '李医生', status: '待就诊' },
-  { no: 'A003', petName: '小白', owner: '李四', doctor: '王医生', status: '待取号' },
-  { no: 'A004', petName: '小黑', owner: '王五', doctor: '李医生', status: '就诊中' },
-  { no: 'A005', petName: '花花', owner: '赵六', doctor: '王医生', status: '待就诊' },
-  { no: 'A006', petName: '毛毛', owner: '孙七', doctor: '李医生', status: '待取号' },
-  { no: 'A007', petName: '绒绒', owner: '周八', doctor: '王医生', status: '就诊完成' },
-  { no: 'A008', petName: '球球', owner: '吴九', doctor: '李医生', status: '待就诊' },
-  { no: 'A009', petName: '大黄', owner: '郑十', doctor: '王医生', status: '待取号' },
-  { no: 'A010', petName: '二黄', owner: '王十一', doctor: '李医生', status: '就诊中' },
-  { no: 'A011', petName: '小强', owner: '李十二', doctor: '王医生', status: '待就诊' },
-  { no: 'A012', petName: '旺财', owner: '张十三', doctor: '李医生', status: '待取号' }
-])
+// 从后端获取的预约数据
+const appointmentList = ref([])
 
-// 过滤待就诊的数据
+// 前台信息
+const receptionistInfo = ref(null)
+
+// 加载前台信息
+const loadReceptionistInfo = async () => {
+  try {
+    const userId = localStorage.getItem('userId')
+    if (userId) {
+      const res = await getReceptionistInfo(userId)
+      receptionistInfo.value = res.data
+      console.log('加载前台信息:', receptionistInfo.value)
+    }
+  } catch (error) {
+    console.error('加载前台信息失败:', error)
+  }
+}
+
+// 组件挂载时加载数据
+onMounted(async () => {
+  await loadReceptionistInfo()
+  loadAppointments()
+})
+
+// 过滤待就诊的数据（从后端数据中过滤）
 const filteredQueueData = computed(() => {
-  return queueData.value.filter(item => item.status === '待就诊')
+  // 使用后端数据
+  if (appointmentList.value.length > 0) {
+    console.log('原始预约数据状态:', appointmentList.value.map(app => ({id: app.id, status: app.status})))
+    
+    // 将后端数据转换为前端需要的格式
+    const convertedData = appointmentList.value.map(app => {
+      const statusText = app.status === 'waiting' ? '待就诊' : 
+                        app.status === 'in_progress' ? '正在就诊' : 
+                        app.status === 'pending' ? '待取号' : 
+                        app.status === 'completed' ? '就诊完成' : 
+                        app.status === 'cancelled' ? '已取消' : '未知'
+      
+      console.log(`预约 ${app.id}: 后端状态=${app.status}, 前端显示=${statusText}`)
+      
+      return {
+        no: `A${String(app.id).padStart(3, '0')}`,
+        petName: app.petName || `宠物 ${app.petId}`,
+        owner: app.userName || `用户 ${app.userId}`,
+        doctor: app.doctorName || `医生 ${app.doctorId}`,
+        status: statusText
+      }
+    })
+    
+    console.log('转换后的数据:', convertedData)
+    return convertedData.filter(item => item.status === '待就诊' || item.status === '正在就诊')
+  }
+  return []
 })
 
 // 计算当前页的候诊数据（仅待就诊）
@@ -149,8 +186,62 @@ const handleCurrentChange = (val) => {
   currentPage.value = val
 }
 
+// 加载本科室的预约数据
+const loadAppointments = async () => {
+  try {
+    // 从 receptionistInfo 获取科室信息
+    const department = receptionistInfo.value?.department
+    console.log('当前科室:', department)
+    
+    let res
+    if (department) {
+      console.log('请求科室:', department)
+      res = await getAllAppointmentsByDepartment(department)
+    } else {
+      console.log('没有科室信息，加载所有预约')
+      res = await getAllAppointments()
+    }
+    
+    const allAppointments = res.data || []
+    console.log('API 返回:', res)
+    console.log('所有预约数量:', allAppointments.length)
+    
+    // 过滤出本科室的预约，并且只显示待取号、待就诊和正在就诊的预约
+    const filteredAppointments = allAppointments.filter(app => 
+      app.department === department && 
+      (app.status === 'pending' || app.status === 'waiting' || app.status === 'in_progress')
+    )
+    
+    if (filteredAppointments.length > 0) {
+      appointmentList.value = filteredAppointments
+    } else if (!department && allAppointments.length > 0) {
+      // 获取第一个预约的科室作为当前科室
+      const firstDepartment = allAppointments[0].department
+      if (firstDepartment) {
+        console.log('从预约数据中提取科室:', firstDepartment)
+        // 更新 receptionistInfo
+        receptionistInfo.value = { department: firstDepartment }
+        // 过滤出本科室的预约
+        appointmentList.value = allAppointments.filter(app => 
+          app.department === firstDepartment && 
+          (app.status === 'pending' || app.status === 'waiting' || app.status === 'in_progress')
+        )
+      } else {
+        appointmentList.value = []
+      }
+    } else {
+      appointmentList.value = []
+    }
+    
+    console.log('加载预约数据:', appointmentList.value)
+    console.log('预约数量:', appointmentList.value.length)
+  } catch (error) {
+    console.error('加载预约数据失败:', error)
+  }
+}
+
 // 监听自定义事件，接收取号数据
-const handleCheckIn = (data) => {
+const handleCheckIn = async (data) => {
   // 生成排队号
   const queueNumber = `A${String(queueData.value.length + 1).padStart(3, '0')}`
   
@@ -162,11 +253,15 @@ const handleCheckIn = (data) => {
     doctor: data.doctor,
     status: data.status
   })
+  
+  // 从后端重新加载预约数据
+  await loadAppointments()
 }
 
 // 暴露方法给父组件
 defineExpose({
-  handleCheckIn
+  handleCheckIn,
+  loadAppointments
 })
 </script>
 

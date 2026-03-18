@@ -8,23 +8,44 @@
         </div>
       </template>
 
-      <el-table :data="paginatedAppointments" stripe style="width: 100%">
-        <el-table-column prop="date" label="预约时间" width="180"></el-table-column>
+      <el-table :data="paginatedAppointments" stripe style="width: 100%" v-loading="loading">
+        <el-table-column prop="appointmentDate" label="预约日期" width="120">
+          <template #default="scope">
+            {{ scope.row.appointmentDate }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="appointmentTime" label="预约时间" width="100">
+          <template #default="scope">
+            {{ scope.row.appointmentTime }}
+          </template>
+        </el-table-column>
         <el-table-column prop="petName" label="就诊宠物" width="120"></el-table-column>
-        <el-table-column prop="doctor" label="预约医生" width="120"></el-table-column>
-        <el-table-column prop="desc" label="病情描述"></el-table-column>
+        <el-table-column prop="petSpecies" label="种类" width="80"></el-table-column>
+        <el-table-column prop="petBreed" label="品种" width="100"></el-table-column>
+        <el-table-column prop="doctorName" label="预约医生" width="120"></el-table-column>
+        <el-table-column prop="department" label="科室" width="100"></el-table-column>
+        <el-table-column prop="reason" label="病情描述"></el-table-column>
         <el-table-column prop="status" label="当前状态" width="120">
           <template #default="scope">
-            <el-tag v-if="scope.row.status === '待取号'" type="info">待取号</el-tag>
-            <el-tag v-else-if="scope.row.status === '待就诊'" type="warning">待就诊</el-tag>
-            <el-tag v-else-if="scope.row.status === '就诊中'" type="primary">就诊中</el-tag>
-            <el-tag v-else-if="scope.row.status === '就诊完成'" type="success">就诊完成</el-tag>
+            <el-tag v-if="scope.row.status === 'pending'" type="info">待取号</el-tag>
+            <el-tag v-else-if="scope.row.status === 'waiting'" type="warning">待就诊</el-tag>
+            <el-tag v-else-if="scope.row.status === 'in_progress'" type="primary">正在就诊</el-tag>
+            <el-tag v-else-if="scope.row.status === 'completed'" type="success">已完成</el-tag>
+            <el-tag v-else-if="scope.row.status === 'cancelled'" type="danger">已取消</el-tag>
             <el-tag v-else type="info">未知状态</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="120">
           <template #default="scope">
-            <el-button v-if="scope.row.status === '待就诊'" type="danger" link size="small">取消预约</el-button>
+            <el-button 
+              v-if="scope.row.status === 'pending' || scope.row.status === 'confirmed'" 
+              type="danger" 
+              link 
+              size="small"
+              @click="handleCancelAppointment(scope.row.id)"
+            >
+              取消预约
+            </el-button>
             <el-button v-else type="primary" link size="small" disabled>查看详情</el-button>
           </template>
         </el-table-column>
@@ -60,91 +81,123 @@
 
   <!-- 发起新预约弹窗 -->
   <el-dialog v-model="bookingDialogVisible" title="发起新预约" width="500px">
-    <el-form label-width="100px" :model="bookingForm">
-      <el-form-item label="选择宠物">
-        <el-select v-model="bookingForm.petId" placeholder="请选择就诊宠物">
+    <el-form label-width="100px" :model="bookingForm" v-loading="submitting">
+      <el-form-item label="选择宠物" prop="petId">
+        <el-select v-model="bookingForm.petId" placeholder="请选择就诊宠物" style="width: 100%">
           <el-option
             v-for="pet in pets"
             :key="pet.id"
             :label="`${pet.name} (${pet.breed})`"
-            :value="pet.id">
+            :value="pet.id"
+          >
           </el-option>
         </el-select>
       </el-form-item>
       
-      <el-form-item label="预约科室">
-        <el-select v-model="bookingForm.department" placeholder="请选择科室">
-          <el-option label="全科门诊" value="general"></el-option>
-          <el-option label="外科" value="surgery"></el-option>
-          <el-option label="牙科" value="dentistry"></el-option>
-          <el-option label="眼科" value="ophthalmology"></el-option>
-          <el-option label="皮肤科" value="dermatology"></el-option>
+      <el-form-item label="预约科室" prop="department">
+        <el-select v-model="bookingForm.department" placeholder="请选择科室" style="width: 100%" @change="handleDepartmentChange">
+          <el-option 
+            v-for="dept in departments" 
+            :key="dept.id" 
+            :label="dept.name" 
+            :value="dept.name"
+          ></el-option>
         </el-select>
       </el-form-item>
       
-      <el-form-item label="指定医生">
-        <el-select v-model="bookingForm.doctor" placeholder="可不选 (随机分配)">
-          <el-option label="王医生 (主任)" value="wang"></el-option>
-          <el-option label="李医生 (副主任)" value="li"></el-option>
-          <el-option label="张医生 (主治)" value="zhang"></el-option>
-        </el-select>
-      </el-form-item>
-      
-      <el-form-item label="预约时间">
+      <el-form-item label="预约日期" prop="appointmentDate">
         <el-date-picker
-          v-model="bookingForm.appointmentTime"
-          type="datetime"
-          placeholder="请选择预约时间"
-          format="YYYY-MM-DD HH:mm"
-          value-format="YYYY-MM-DD HH:mm"
-          :disabledDate="disabledDate"
-          :disabledHours="disabledHours"
-          :disabledMinutes="disabledMinutes">
-        </el-date-picker>
+          v-model="bookingForm.appointmentDate"
+          type="date"
+          placeholder="请选择预约日期"
+          format="YYYY-MM-DD"
+          value-format="YYYY-MM-DD"
+          :disabled-date="disabledDate"
+          @change="handleDateChange"
+          style="width: 100%"
+        ></el-date-picker>
       </el-form-item>
       
-      <el-form-item label="病情描述">
+      <el-form-item label="指定医生" prop="doctorId">
+        <el-select v-model="bookingForm.doctorId" placeholder="请选择医生" style="width: 100%" :disabled="!bookingForm.appointmentDate || !bookingForm.department || !doctors || doctors.length === 0">
+          <el-option 
+            v-for="doctor in doctors || []" 
+            :key="doctor.id" 
+            :label="getDoctorLabel(doctor)"
+            :value="doctor.id"
+          ></el-option>
+        </el-select>
+        <div v-if="bookingForm.appointmentDate && bookingForm.department" style="font-size: 12px; color: #909399; margin-top: 5px; display: flex; align-items: center; gap: 4px;">
+          <el-icon><InfoFilled /></el-icon>
+          <span>仅显示 {{ bookingForm.appointmentDate }} 值班的医生</span>
+        </div>
+      </el-form-item>
+      
+      <el-form-item label="病情描述" prop="reason">
         <el-input
-          v-model="bookingForm.description"
+          v-model="bookingForm.reason"
           type="textarea"
           placeholder="请简要描述宠物的症状或就诊原因"
-          :rows="3">
-        </el-input>
+          :rows="3"
+        ></el-input>
       </el-form-item>
     </el-form>
     
     <template #footer>
       <el-button @click="bookingDialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="submitBooking">确认预约</el-button>
+      <el-button type="primary" @click="submitBooking" :loading="submitting">确认预约</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup>
-import { ref, defineProps, computed } from 'vue'
+import { ref, defineProps, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { InfoFilled } from '@element-plus/icons-vue'
+import { getUserAppointments, createAppointment, cancelAppointment, getDepartments, getDoctorsByDepartment, getOnDutyDoctorsByDateAndDepartment } from '@/services/api'
 
 // 定义props
 const props = defineProps({
-  appointments: {
-    type: Array,
-    required: true
-  },
   pets: {
     type: Array,
     required: true
   }
 })
 
+// 加载状态
+const loading = ref(false)
+const submitting = ref(false)
+
 // 分页相关数据
 const currentPage = ref(1)
 const pageSize = ref(10)
+
+// 预约列表数据
+const appointments = ref([])
+
+// 科室和医生数据
+const departments = ref([])
+const doctors = ref([])
+const allDoctorsInDepartment = ref([]) // 存储科室的所有医生
+const onDutyDoctorIds = ref([]) // 存储值班的医生 ID
+
+// 弹窗控制
+const bookingDialogVisible = ref(false)
+
+// 预约表单数据
+const bookingForm = ref({
+  petId: '',
+  department: '',
+  doctorId: null,
+  appointmentDate: '',
+  reason: ''
+})
 
 // 计算当前页的预约数据
 const paginatedAppointments = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   const end = start + pageSize.value
-  return props.appointments.slice(start, end)
+  return appointments.value.slice(start, end)
 })
 
 // 分页事件处理
@@ -157,76 +210,183 @@ const handleCurrentChange = (val) => {
   currentPage.value = val
 }
 
-// 弹窗控制
-const bookingDialogVisible = ref(false)
+// 加载用户预约列表
+const loadUserAppointments = async () => {
+  try {
+    loading.value = true
+    const userId = localStorage.getItem('userId')
+    if (userId) {
+      const res = await getUserAppointments(userId)
+      appointments.value = res.data.map(appointment => ({
+        ...appointment,
+        petName: props.pets.find(pet => pet.id === appointment.petId)?.name || '未知宠物',
+        petSpecies: props.pets.find(pet => pet.id === appointment.petId)?.species || '',
+        petBreed: props.pets.find(pet => pet.id === appointment.petId)?.breed || '',
+        doctorName: appointment.doctorName || (appointment.doctorId ? `医生 ${appointment.doctorId}` : '随机分配'),
+        department: appointment.department || ''
+      }))
+    }
+  } catch (error) {
+    console.error('加载预约列表失败:', error)
+    ElMessage.error('加载预约列表失败')
+  } finally {
+    loading.value = false
+  }
+}
 
-// 预约表单数据
-const bookingForm = ref({
-  petId: '',
-  department: '',
-  doctor: '',
-  appointmentTime: '',
-  description: ''
-})
+// 加载科室列表
+const loadDepartments = async () => {
+  try {
+    const res = await getDepartments()
+    departments.value = res.data
+  } catch (error) {
+    console.error('加载科室失败:', error)
+  }
+}
+
+// 科室变化时加载对应医生
+const handleDepartmentChange = async (department) => {
+  bookingForm.value.doctorId = null
+  doctors.value = []
+  allDoctorsInDepartment.value = []
+  onDutyDoctorIds.value = []
+  
+  if (department) {
+    try {
+      const res = await getDoctorsByDepartment(department)
+      // API 返回格式: {status: 200, data: [...]}
+      const allDoctors = res.data || []
+      allDoctorsInDepartment.value = allDoctors
+      
+      // 如果已经选择了日期，则过滤值班医生
+      if (bookingForm.value.appointmentDate) {
+        await loadOnDutyDoctors(String(bookingForm.value.appointmentDate), department)
+      } else {
+        doctors.value = allDoctors
+      }
+    } catch (error) {
+      console.error('加载医生失败:', error)
+    }
+  }
+}
+
+// 加载值班医生
+const loadOnDutyDoctors = async (date, department) => {
+  if (!date || !department) {
+    doctors.value = []
+    return
+  }
+  try {
+    const res = await getOnDutyDoctorsByDateAndDepartment(date, department)
+    // API 返回格式: {status: 200, data: {code: "0", data: [...]}
+    doctors.value = res.data?.data || []
+  } catch (error) {
+    console.error('加载值班医生失败:', error)
+    // 如果获取值班医生失败，显示所有医生
+    doctors.value = allDoctorsInDepartment.value || []
+  }
+}
+
+// 预约日期变化时重新加载值班医生
+const handleDateChange = async () => {
+  bookingForm.value.doctorId = null
+  
+  if (bookingForm.value.appointmentDate && bookingForm.value.department) {
+    await loadOnDutyDoctors(String(bookingForm.value.appointmentDate), bookingForm.value.department)
+  } else if (bookingForm.value.department) {
+    // 如果没有选择日期，显示科室所有医生
+    doctors.value = allDoctorsInDepartment.value || []
+  } else {
+    doctors.value = []
+  }
+}
 
 // 禁用过去的日期
 const disabledDate = (time) => {
   return time.getTime() < Date.now() - 8.64e7
 }
 
-// 禁用小时 (工作时间 8:00-18:00)
-const disabledHours = () => {
-  return [
-    0, 1, 2, 3, 4, 5, 6, 7,
-    18, 19, 20, 21, 22, 23
-  ]
-}
-
-// 禁用分钟 (只允许 00 和 30 分)
-const disabledMinutes = (hour) => {
-  if (hour >= 8 && hour < 18) {
-    // 工作时间内每30分钟一个时段
-    return []
-  } else {
-    // 非工作时间禁用所有分钟
-    return Array.from({ length: 60 }, (_, i) => i)
-  }
+// 获取医生显示标签
+const getDoctorLabel = (doctor) => {
+  const name = doctor?.name || '未知医生'
+  const position = doctor?.position || '医生'
+  return `${name} (${position})`
 }
 
 // 提交预约
-const submitBooking = () => {
-  if (!bookingForm.value.petId || !bookingForm.value.department || !bookingForm.value.appointmentTime) {
+const submitBooking = async () => {
+  if (!bookingForm.value.petId || !bookingForm.value.department || !bookingForm.value.appointmentDate) {
     ElMessage.error('请填写必填项')
     return
   }
   
-  // 获取选中的宠物名称
-  const selectedPet = props.pets.find(pet => pet.id === bookingForm.value.petId)
-  
-  // 构造预约对象
-  const newAppointment = {
-    date: bookingForm.value.appointmentTime,
-    petName: selectedPet ? selectedPet.name : '',
-    doctor: bookingForm.value.doctor || '随机分配',
-    desc: bookingForm.value.description || '无描述',
-    status: '待取号'
+  try {
+    submitting.value = true
+    const userId = localStorage.getItem('userId')
+    
+    const appointmentData = {
+      userId: Number(userId),
+      petId: bookingForm.value.petId,
+      doctorId: bookingForm.value.doctorId,
+      appointmentDate: bookingForm.value.appointmentDate,
+      appointmentTime: '09:00:00',
+      reason: bookingForm.value.reason || '',
+      department: bookingForm.value.department
+    }
+    
+    await createAppointment(appointmentData)
+    
+    // 关闭弹窗并重置表单
+    bookingDialogVisible.value = false
+    bookingForm.value = {
+      petId: '',
+      department: '',
+      doctorId: null,
+      appointmentDate: '',
+      reason: ''
+    }
+    
+    // 重新加载预约列表
+    await loadUserAppointments()
+    
+    ElMessage.success('预约提交成功！')
+  } catch (error) {
+    console.error('预约提交失败:', error)
+    console.error('错误响应:', error.response?.data)
+    ElMessage.error('预约提交失败，请重试')
+  } finally {
+    submitting.value = false
   }
-  
-  // 这里应该调用API提交预约，现在只是模拟
-  console.log('提交预约:', newAppointment)
-  
-  // 关闭弹窗并重置表单
-  bookingDialogVisible.value = false
-  bookingForm.value = {
-    petId: '',
-    department: '',
-    doctor: '',
-    appointmentTime: '',
-    description: ''
-  }
-  
-  ElMessage.success('预约提交成功！')
 }
+
+// 取消预约
+const handleCancelAppointment = async (appointmentId) => {
+  try {
+    await cancelAppointment(appointmentId)
+    // 重新加载预约列表
+    await loadUserAppointments()
+    ElMessage.success('预约已取消')
+  } catch (error) {
+    console.error('取消预约失败:', error)
+    ElMessage.error('取消预约失败，请重试')
+  }
+}
+
+// 初始化
+onMounted(async () => {
+  await loadDepartments()
+  await loadUserAppointments()
+})
+
+// 监听宠物列表变化，更新预约列表中的宠物名称
+watch(() => props.pets, () => {
+  appointments.value = appointments.value.map(appointment => ({
+    ...appointment,
+    petName: props.pets.find(pet => pet.id === appointment.petId)?.name || '未知宠物',
+    petSpecies: props.pets.find(pet => pet.id === appointment.petId)?.species || '',
+    petBreed: props.pets.find(pet => pet.id === appointment.petId)?.breed || ''
+  }))
+}, { deep: true })
 </script>
 
 <style scoped>

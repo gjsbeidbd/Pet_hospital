@@ -11,20 +11,61 @@
             v-for="(p, index) in waitingList"
             :key="p.id"
             class="patient-card"
-            :class="{ active: currentPatient && currentPatient.id === p.id }"
+            :class="{ 
+              active: currentPatient && currentPatient.id === p.id
+            }"
             shadow="hover"
             :body-style="{ padding: '10px' }"
-            @click="callPatient(p)"
         >
-          <div style="display: flex; justify-content: space-between;">
-            <span style="font-weight: bold;">{{ p.no }} {{ p.name }}</span>
-            <el-tag size="small" :type="p.type === '急诊' ? 'danger' : 'primary'">{{ p.type }}</el-tag>
+          <!-- 患者信息标题行 -->
+          <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" @click="selectPatient(p)">
+            <div style="flex: 1;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: bold;">{{ p.no }} {{ p.name }}</span>
+                <el-tag size="small" :type="currentPatient && currentPatient.id === p.id ? 'success' : 'warning'">{{ currentPatient && currentPatient.id === p.id ? '正在候诊' : '待候诊' }}</el-tag>
+              </div>
+              <div style="color: #999; font-size: 12px; margin-top: 5px;">
+                主人: {{ p.owner }} | {{ p.breed }}
+              </div>
+            </div>
+            <el-icon style="color: #909399;" :size="16">
+              <ArrowRight v-if="expandedPatientId !== p.id" />
+              <ArrowDown v-else />
+            </el-icon>
           </div>
-          <div style="color: #999; font-size: 12px; margin-top: 5px;">
-            主人: {{ p.owner }} | {{ p.breed }}
-          </div>
-          <div style="margin-top: 5px; font-size: 13px;">
-            主诉: {{ p.reason }}
+          
+          <!-- 展开的患者详细信息 -->
+          <div v-if="expandedPatientId === p.id" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
+            <div style="font-size: 13px; color: #606266; margin-bottom: 8px;">
+              <span style="font-weight: bold;">主诉：</span>{{ p.reason }}
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+              <el-button 
+                v-if="p.status === 'waiting'" 
+                type="primary" 
+                size="small" 
+                @click.stop="callPatient(p)"
+              >
+                开始就诊
+              </el-button>
+              <el-button 
+                v-else-if="p.status === 'in_progress'" 
+                type="success" 
+                size="small" 
+                @click.stop="loadExistingForm(p)"
+              >
+                继续就诊
+              </el-button>
+              <el-button 
+                v-else 
+                type="info" 
+                size="small" 
+                @click.stop="loadExistingForm(p)"
+              >
+                查看病历
+              </el-button>
+            </div>
           </div>
         </el-card>
         <el-empty v-if="waitingList.length === 0" description="暂无候诊" :image-size="60"></el-empty>
@@ -35,20 +76,23 @@
     <div style="flex: 1; background: #fff; border-radius: 4px; padding: 20px; overflow-y: auto;">
       <div v-if="!currentPatient" style="height: 100%; display: flex; justify-content: center; align-items: center; flex-direction: column; color: #909399;">
         <el-icon size="60"><Service /></el-icon>
-        <p>请从左侧列表选择患者并点击"叫号接诊"</p>
+        <p style="margin-top: 10px;">请从左侧列表点击患者卡片展开信息，然后点击"开始就诊"按钮</p>
       </div>
 
       <div v-else>
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px;">
+        <!-- 页面顶部操作栏 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #409eff; padding-bottom: 15px; margin-bottom: 20px;">
           <div>
             <span style="font-size: 20px; font-weight: bold; margin-right: 10px;">{{ currentPatient.name }}</span>
             <el-tag>{{ currentPatient.breed }}</el-tag>
             <el-tag type="info" style="margin-left: 5px;">{{ currentPatient.age }}岁</el-tag>
             <el-tag type="warning" style="margin-left: 5px;">体重: {{ currentPatient.weight }}kg</el-tag>
+            <el-tag v-if="medicalForm.isDraftSaved" type="success" style="margin-left: 5px;">已保存</el-tag>
           </div>
           <div>
-            <el-button type="primary" plain @click="historyDrawer = true">查看历史病历</el-button>
-            <el-button type="success" @click="finishDiagnose">完成诊疗</el-button>
+            <el-button type="primary" plain @click="viewHistory">查看历史病历</el-button>
+            <el-button type="success" @click="saveDraft">保存草稿</el-button>
+            <el-button type="primary" @click="finishDiagnose">完成诊疗</el-button>
           </div>
         </div>
 
@@ -69,6 +113,13 @@
             </el-col>
 
             <el-col :span="24">
+              <div class="section-title">初步诊断结果 (Preliminary Diagnosis)</div>
+              <el-form-item>
+                <el-input v-model="medicalForm.diagnosis" placeholder="请输入初步诊断结果"></el-input>
+              </el-form-item>
+            </el-col>
+
+            <el-col :span="24">
               <div class="section-title">检查申请</div>
               <el-form-item label="检查项目">
                 <el-select 
@@ -78,70 +129,88 @@
                   style="width: 100%"
                 >
                   <el-option label="不开检查单" value=""></el-option>
-                  <el-option label="CT检查" value="CT检查"></el-option>
-                  <el-option label="X光检查" value="X光检查"></el-option>
-                  <el-option label="B超检查" value="B超检查"></el-option>
-                  <el-option label="血液检查" value="血液检查"></el-option>
-                  <el-option label="尿液检查" value="尿液检查"></el-option>
+                  <el-option 
+                    v-for="item in examinationOptions" 
+                    :key="item.value" 
+                    :label="item.label" 
+                    :value="item.value"
+                  ></el-option>
                 </el-select>
                 <div style="margin-top: 10px; font-size: 14px; color: #666;">
                   <div v-if="!medicalForm.selectedExamination">当前选择：不开检查单，可直接填写诊断结果</div>
-                  <div v-else>当前选择：{{ medicalForm.selectedExamination }}，需等待检查结果出具后再填写最终诊断结果</div>
+                  <div v-else>当前选择：{{ medicalForm.selectedExamination }}，需填写检查结果</div>
                 </div>
               </el-form-item>
               
-              <!-- 检查状态显示 -->
-              <el-form-item v-if="medicalForm.selectedExamination">
-                <el-alert 
-                  :title="`已申请检查：${medicalForm.selectedExamination}`" 
-                  type="warning" 
-                  show-icon
-                  :closable="false"
-                >
-                  <template #default>
-                    <div>
-                      <p>检查状态：{{ medicalForm.examinationStatus || '等待检查中...' }}</p>
-                      <el-button 
-                        v-if="medicalForm.examinationStatus !== '已完成'" 
-                        type="primary" 
-                        size="small" 
-                        @click="markExaminationComplete"
-                        style="margin-top: 10px"
-                      >
-                        标记检查完成
-                      </el-button>
-                    </div>
-                  </template>
-                </el-alert>
+              <!-- 检查结果输入框 -->
+              <el-form-item label="检查结果" v-if="medicalForm.selectedExamination && medicalForm.selectedExamination !== ''">
+                <el-input v-model="medicalForm.examinationResult" type="textarea" :rows="3" placeholder="请输入检查结果" clearable></el-input>
               </el-form-item>
             </el-col>
 
             <el-col :span="24">
-              <div class="section-title">诊断结果 (Diagnosis)</div>
-              <el-form-item>
-                <el-input v-model="medicalForm.diagnosis" placeholder="请输入初步诊断结果"></el-input>
+              <div class="section-title">手术申请</div>
+              <el-form-item label="手术项目">
+                <el-select 
+                  v-model="medicalForm.selectedSurgery" 
+                  placeholder="请选择手术项目（可不选）" 
+                  clearable
+                  style="width: 100%"
+                >
+                  <el-option label="不开手术单" value=""></el-option>
+                  <el-option 
+                    v-for="item in surgeryOptions" 
+                    :key="item.value" 
+                    :label="item.label" 
+                    :value="item.value"
+                  ></el-option>
+                </el-select>
+                <div style="margin-top: 10px; font-size: 14px; color: #666;">
+                  <div v-if="!medicalForm.selectedSurgery">当前选择：不开手术单</div>
+                  <div v-else>当前选择：{{ medicalForm.selectedSurgery }}，需填写手术结果</div>
+                </div>
+              </el-form-item>
+              
+              <!-- 手术结果输入框 -->
+              <el-form-item label="手术结果" v-if="medicalForm.selectedSurgery && medicalForm.selectedSurgery !== ''">
+                <el-input v-model="medicalForm.surgeryResult" type="textarea" :rows="3" placeholder="请输入手术结果" clearable></el-input>
               </el-form-item>
             </el-col>
 
             <el-col :span="24">
               <div class="section-title">
                 处方开具 (Prescription)
-                <el-button type="primary" link size="small" icon="Plus" @click="addDrug" style="float: right;">添加药品</el-button>
+                <el-button type="primary" size="small" @click="addDrug" style="float: right;">
+                  <el-icon><Plus /></el-icon>
+                  添加药品
+                </el-button>
               </div>
               <el-table :data="medicalForm.drugs" border size="small">
+                <el-table-column label="药品类别" width="150">
+                  <template #default="scope">
+                    <el-select v-model="scope.row.type" placeholder="选择类别" @change="onDrugTypeChange(scope.row)">
+                      <el-option v-for="type in drugTypes" :key="type" :label="type" :value="type"></el-option>
+                    </el-select>
+                  </template>
+                </el-table-column>
                 <el-table-column label="药品名称" width="200">
                   <template #default="scope">
-                    <el-select v-model="scope.row.name" placeholder="选择药品" filterable>
-                      <el-option v-for="drug in drugOptions" :key="drug.id" :label="drug.name" :value="drug.name">
+                    <el-select v-model="scope.row.name" placeholder="选择药品" filterable :disabled="!scope.row.type" @change="onDrugNameChange(scope.row)">
+                      <el-option v-for="drug in getDrugsByType(scope.row.type)" :key="drug.id" :label="drug.name" :value="drug.name">
                         <span style="float: left">{{ drug.name }}</span>
                         <span style="float: right; color: #8492a6; font-size: 13px">库存:{{ drug.stock }}</span>
                       </el-option>
                     </el-select>
                   </template>
                 </el-table-column>
-                <el-table-column label="数量" width="150">
+                <el-table-column label="数量" width="120">
                   <template #default="scope">
-                    <el-input-number v-model="scope.row.count" :min="1" size="small"></el-input-number>
+                    <el-input-number v-model="scope.row.count" :min="1" size="small" style="width: 80px;"></el-input-number>
+                  </template>
+                </el-table-column>
+                <el-table-column label="单位" width="100">
+                  <template #default="scope">
+                    <el-input v-model="scope.row.unit" size="small" placeholder="单位" :disabled="true"></el-input>
                   </template>
                 </el-table-column>
                 <el-table-column label="用法用量 (医嘱)">
@@ -151,7 +220,7 @@
                 </el-table-column>
                 <el-table-column label="操作" width="80">
                   <template #default="scope">
-                    <el-button type="danger" link icon="Delete" @click="removeDrug(scope.$index)"></el-button>
+                    <el-button type="danger" size="small" @click="removeDrug(scope.$index)">删除</el-button>
                   </template>
                 </el-table-column>
               </el-table>
@@ -160,12 +229,12 @@
             <el-col :span="24" style="margin-top: 20px;">
               <div class="section-title">附加医嘱</div>
               <el-form-item>
-                <el-checkbox-group v-model="medicalForm.advices">
-                  <el-checkbox label="禁食24小时" border></el-checkbox>
-                  <el-checkbox label="限制运动" border></el-checkbox>
-                  <el-checkbox label="一周后复查" border></el-checkbox>
-                  <el-checkbox label="佩戴伊丽莎白圈" border></el-checkbox>
-                </el-checkbox-group>
+                <el-input 
+                  v-model="medicalForm.advicesText" 
+                  type="textarea" 
+                  :rows="3" 
+                  placeholder="请输入附加医嘱，例如：禁食24小时、限制运动、一周后复查、佩戴伊丽莎白圈等..."
+                ></el-input>
               </el-form-item>
             </el-col>
           </el-row>
@@ -175,31 +244,51 @@
   </div>
 
   <!-- 历史病历抽屉 -->
-  <el-drawer v-model="historyDrawer" title="该宠物历史就诊记录" size="40%">
+  <el-drawer v-model="historyDrawer" title="该宠物历史就诊记录" size="60%">
     <div v-if="currentPatient">
-      <el-timeline>
-        <el-timeline-item timestamp="2023/05/10" placement="top">
-          <el-card>
-            <h4>接种疫苗 (妙三多)</h4>
-            <p>医生：李医生</p>
-          </el-card>
-        </el-timeline-item>
-        <el-timeline-item timestamp="2022/12/02" placement="top" color="#F56C6C">
-          <el-card>
-            <h4>后腿外伤处理</h4>
-            <p>诊断：软组织挫伤，无骨折。</p>
-            <p>处方：消炎喷剂，止痛药。</p>
-          </el-card>
-        </el-timeline-item>
-      </el-timeline>
+      <el-table :data="patientHistory" border style="width: 100%" class="data-table" empty-text="暂无历史就诊记录">
+        <el-table-column prop="visitDate" label="就诊日期" width="120" align="center">
+          <template #default="scope">
+            <span style="font-weight: bold;">{{ scope.row.visitDate }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="doctorName" label="接诊医生" width="120" align="center"></el-table-column>
+        <el-table-column prop="diagnosis" label="诊断结果" min-width="200" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="examination" label="检查项目" width="120" align="center">
+          <template #default="scope">
+            <el-tag v-if="scope.row.examination" type="info" size="small">{{ scope.row.examination }}</el-tag>
+            <span v-else style="color: #999;">无</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="surgery" label="手术项目" width="120" align="center">
+          <template #default="scope">
+            <el-tag v-if="scope.row.surgery" type="warning" size="small">{{ scope.row.surgery }}</el-tag>
+            <span v-else style="color: #999;">无</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="prescriptionCount" label="处方药品" width="100" align="center">
+          <template #default="scope">
+            <el-tag v-if="scope.row.prescriptionCount > 0" type="success" size="small">
+              {{ scope.row.prescriptionCount }}种
+            </el-tag>
+            <span v-else style="color: #999;">无</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="120" fixed="right" align="center">
+          <template #default="scope">
+            <el-button type="primary" size="small" @click="viewMedicalRecordDetail(scope.row)">查看详情</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
     </div>
   </el-drawer>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Service, Refresh, Plus, Delete } from '@element-plus/icons-vue'
+import { Service, Refresh, Plus, Delete, ArrowRight, ArrowDown } from '@element-plus/icons-vue'
+import { startConsultation as startConsultationAPI, finishConsultation as finishConsultationAPI, getFeeItems, addMedicalRecord, getMedicalRecordsByDoctorId, updateMedicalRecord } from '@/services/api'
 
 // 定义props
 const props = defineProps({
@@ -214,62 +303,389 @@ const props = defineProps({
 })
 
 // 定义emits
-const emit = defineEmits(['call-patient', 'finish-diagnose'])
+const emit = defineEmits(['call-patient', 'finish-diagnose', 'refresh-list'])
 
 // 响应式状态
 const historyDrawer = ref(false)
 const currentPatient = ref(null)
+const expandedPatientId = ref(null)
+const examinationOptions = ref([]) // 检查项目选项
+const surgeryOptions = ref([]) // 手术项目选项
+const patientHistory = ref([]) // 患者历史病历数据
 
 const medicalForm = reactive({
   symptoms: '',
   diagnosis: '',
   drugs: [],
-  advices: [],
+  advicesText: '',
   selectedExamination: '',
-  examinationStatus: ''
+  examinationStatus: '',
+  selectedSurgery: '',
+  surgeryStatus: '',
+  isDraftSaved: false
 })
 
-// 方法
-const callPatient = (patient) => {
-  if (currentPatient.value && currentPatient.value.id !== patient.id) {
-    ElMessageBox.confirm('当前还有未完成的诊疗，确定要切换患者吗？', '提示')
-        .then(() => startConsultation(patient))
-  } else {
-    startConsultation(patient)
+// 组件挂载时加载检查费和手术费数据
+onMounted(async () => {
+  await loadExaminationOptions()
+  await loadSurgeryOptions()
+})
+
+// 查看历史病历
+const viewHistory = async () => {
+  if (!currentPatient.value) {
+    ElMessage.warning('请先选择患者')
+    return
+  }
+  
+  try {
+    const doctorId = localStorage.getItem('userId')
+    // 获取该患者的历史病历记录
+    const medicalRecordsRes = await getMedicalRecordsByDoctorId(parseInt(doctorId))
+    const medicalRecords = medicalRecordsRes.data || []
+    
+    // 过滤出当前患者的历史记录
+    const patientRecords = medicalRecords.filter(record => 
+      record.petId === currentPatient.value.id || record.appointmentId === currentPatient.value.id
+    )
+    
+    // 转换为表格显示格式
+    patientHistory.value = patientRecords.map(record => ({
+      id: record.id,
+      visitDate: record.visitDate,
+      doctorName: '当前医生', // 这里可以扩展为获取医生姓名
+      diagnosis: record.diagnosis || '暂无诊断',
+      examination: record.examination || '',
+      surgery: record.surgery || '',
+      prescriptionCount: record.prescription ? JSON.parse(record.prescription).drugs?.length || 0 : 0,
+      fullRecord: record // 保存完整记录用于详情查看
+    }))
+    
+    historyDrawer.value = true
+  } catch (error) {
+    console.error('获取历史病历失败:', error)
+    ElMessage.error('获取历史病历失败')
   }
 }
 
-const startConsultation = (patient) => {
+// 查看病历详情
+const viewMedicalRecordDetail = (record) => {
+  ElMessageBox.alert(
+    `<div style="max-height: 400px; overflow-y: auto;">
+      <h3 style="margin-bottom: 15px;">病历详情</h3>
+      <p><strong>就诊日期：</strong>${record.visitDate}</p>
+      <p><strong>诊断结果：</strong>${record.diagnosis || '无'}</p>
+      <p><strong>检查项目：</strong>${record.examination || '无'}</p>
+      <p><strong>检查结果：</strong>${record.fullRecord.examinationResult || '无'}</p>
+      <p><strong>手术项目：</strong>${record.surgery || '无'}</p>
+      <p><strong>手术结果：</strong>${record.fullRecord.surgeryResult || '无'}</p>
+      <p><strong>处方药品：</strong>${record.prescriptionCount > 0 ? record.prescriptionCount + '种药品' : '无'}</p>
+      <p><strong>治疗方案：</strong>${record.fullRecord.treatment || '无'}</p>
+      <p><strong>备注：</strong>${record.fullRecord.notes || '无'}</p>
+    </div>`,
+    '病历详情',
+    {
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: '关闭',
+      customClass: 'medical-record-detail-dialog'
+    }
+  )
+}
+
+// 加载检查项目选项
+const loadExaminationOptions = async () => {
+  try {
+    const res = await getFeeItems()
+    const feeItems = res.data || []
+    // 过滤出category为"检查费"的项目
+    examinationOptions.value = feeItems
+      .filter(item => item.category === '检查费' && item.isActive)
+      .map(item => ({
+        label: item.itemName,
+        value: item.itemName
+      }))
+    console.log('检查项目选项:', examinationOptions.value)
+  } catch (error) {
+    console.error('加载检查项目失败:', error)
+    // 如果加载失败，使用默认选项
+    examinationOptions.value = [
+      { label: 'CT检查', value: 'CT检查' },
+      { label: 'X光检查', value: 'X光检查' },
+      { label: 'B超检查', value: 'B超检查' },
+      { label: '血液检查', value: '血液检查' },
+      { label: '尿液检查', value: '尿液检查' }
+    ]
+  }
+}
+
+// 药品类别列表
+const drugTypes = ref([
+  '抗生素', '消炎药', '疫苗', '驱虫药', '营养补充剂', 
+  '消化系统药', '皮肤病药', '眼药水', '耳药', '麻醉药'
+])
+
+// 根据类别获取药品列表
+const getDrugsByType = (type) => {
+  if (!type) return []
+  return props.drugOptions.filter(drug => drug.type === type)
+}
+
+// 药品类别选择变化事件
+const onDrugTypeChange = (row) => {
+  // 清空之前选择的药品名称和单位
+  row.name = ''
+  row.unit = ''
+}
+
+// 药品名称选择变化事件
+const onDrugNameChange = (row) => {
+  if (row.name) {
+    // 根据选择的药品名称获取对应的单位
+    const selectedDrug = props.drugOptions.find(drug => drug.name === row.name)
+    if (selectedDrug) {
+      row.unit = selectedDrug.unit || '盒'
+    }
+  } else {
+    row.unit = ''
+  }
+}
+
+// 加载手术项目选项
+const loadSurgeryOptions = async () => {
+  try {
+    const res = await getFeeItems()
+    const feeItems = res.data || []
+    // 过滤出category为"手术费"的项目
+    surgeryOptions.value = feeItems
+      .filter(item => item.category === '手术费' && item.isActive)
+      .map(item => ({
+        label: item.itemName,
+        value: item.itemName
+      }))
+    console.log('手术项目选项:', surgeryOptions.value)
+  } catch (error) {
+    console.error('加载手术项目失败:', error)
+    // 如果加载失败，使用默认选项
+    surgeryOptions.value = [
+      { label: '绝育手术', value: '绝育手术' },
+      { label: '骨折修复', value: '骨折修复' },
+      { label: '肿瘤切除', value: '肿瘤切除' },
+      { label: '剖腹产', value: '剖腹产' },
+      { label: '其他手术', value: '其他手术' }
+    ]
+  }
+}
+
+// 保存草稿（保存到病历表，不修改预约状态）
+const saveDraft = async () => {
+  if (!currentPatient.value) {
+    ElMessage.warning('请先选择患者')
+    return
+  }
+
+  try {
+    // 获取当前医生的病历记录
+    const doctorId = localStorage.getItem('userId')
+    const res = await getMedicalRecordsByDoctorId(doctorId)
+    const medicalRecords = res.data || []
+    
+    // 查找与该患者相关的最近病历记录
+    const patientRecords = medicalRecords.filter(record => 
+      record.appointmentId === currentPatient.value.id
+    )
+    
+    let existingRecordId = null
+    if (patientRecords.length > 0) {
+      // 使用最新的记录ID
+      existingRecordId = patientRecords[patientRecords.length - 1].id
+    }
+
+    // 构建病历数据
+      const medicalRecordData = {
+        petId: currentPatient.value.id, // 这里需要获取实际的宠物ID
+        doctorId: parseInt(doctorId),
+        appointmentId: currentPatient.value.id, // 使用预约ID作为病历的关联
+        visitDate: new Date().toISOString().split('T')[0], // 当前日期
+        diagnosis: medicalForm.diagnosis || '',
+        treatment: medicalForm.symptoms || '', // 临床症状作为治疗方案
+        prescription: JSON.stringify({
+          drugs: medicalForm.drugs,
+          advices: medicalForm.advicesText
+        }),
+        examination: medicalForm.selectedExamination || '',
+        examinationResult: medicalForm.examinationResult || '',
+        surgery: medicalForm.selectedSurgery || '',
+        surgeryResult: medicalForm.surgeryResult || '',
+        notes: medicalForm.notes || '',
+        followUpRequired: false,
+        followUpDate: null
+      }
+
+    // 如果存在记录，则更新；否则创建新记录
+    if (existingRecordId) {
+      await updateMedicalRecord(existingRecordId, medicalRecordData)
+      ElMessage.success('草稿已更新到病历')
+    } else {
+      await addMedicalRecord(medicalRecordData)
+      ElMessage.success('草稿已保存到病历')
+    }
+    
+    medicalForm.isDraftSaved = true
+    setTimeout(() => {
+      medicalForm.isDraftSaved = false
+    }, 3000)
+  } catch (error) {
+    console.error('保存草稿失败:', error)
+    ElMessage.error('保存草稿失败')
+  }
+}
+
+const togglePatient = (patient) => {
+  if (expandedPatientId.value === patient.id) {
+    expandedPatientId.value = null
+  } else {
+    expandedPatientId.value = patient.id
+  }
+}
+
+const selectPatient = (patient) => {
+  if (patient.status === 'waiting' || patient.status === 'in_progress') {
+    if (expandedPatientId.value === patient.id) {
+      loadExistingForm(patient)
+    } else {
+      expandedPatientId.value = patient.id
+    }
+  }
+}
+
+const loadExistingForm = async (patient) => {
+  try {
+    // 获取当前医生的病历记录
+    const doctorId = localStorage.getItem('userId')
+    const res = await getMedicalRecordsByDoctorId(doctorId)
+    const medicalRecords = res.data || []
+    
+    // 查找与该患者相关的最近病历记录
+    const patientRecords = medicalRecords.filter(record => 
+      record.appointmentId === patient.id
+    )
+    
+    // 如果有病历记录，加载最近的一条
+    if (patientRecords.length > 0) {
+      const latestRecord = patientRecords[patientRecords.length - 1] // 获取最新的记录
+      
+      // 解析处方信息
+      let prescriptionData = { drugs: [], advices: '' }
+      try {
+        if (latestRecord.prescription) {
+          prescriptionData = JSON.parse(latestRecord.prescription)
+        }
+      } catch (error) {
+        console.error('解析处方数据失败:', error)
+      }
+      
+      // 加载数据到表单
+      medicalForm.symptoms = latestRecord.treatment || ''
+      medicalForm.diagnosis = latestRecord.diagnosis || ''
+      medicalForm.drugs = prescriptionData.drugs || []
+      medicalForm.advicesText = prescriptionData.advices || ''
+      medicalForm.notes = latestRecord.notes || ''
+      
+      // 直接使用新的字段
+      medicalForm.selectedExamination = latestRecord.examination || ''
+      medicalForm.examinationResult = latestRecord.examinationResult || ''
+      medicalForm.selectedSurgery = latestRecord.surgery || ''
+      medicalForm.surgeryResult = latestRecord.surgeryResult || ''
+      
+      // 根据之前保存的数据设置检查状态和手术状态
+      if (medicalForm.selectedExamination && medicalForm.selectedExamination !== '') {
+        medicalForm.examinationStatus = '等待检查中...'
+      } else {
+        medicalForm.examinationStatus = ''
+      }
+      
+      if (medicalForm.selectedSurgery && medicalForm.selectedSurgery !== '') {
+        medicalForm.surgeryStatus = '等待手术中...'
+      } else {
+        medicalForm.surgeryStatus = ''
+      }
+      
+      ElMessage.success('已加载之前保存的数据')
+    } else {
+      // 没有找到病历记录，清空表单
+      medicalForm.symptoms = ''
+      medicalForm.diagnosis = ''
+      medicalForm.drugs = []
+      medicalForm.advicesText = ''
+      medicalForm.selectedExamination = ''
+      medicalForm.selectedSurgery = ''
+      medicalForm.examinationStatus = ''
+      medicalForm.surgeryStatus = ''
+      
+      ElMessage.info('没有找到之前保存的数据，已清空表单')
+    }
+  } catch (error) {
+    console.error('加载病历数据失败:', error)
+    ElMessage.error('加载病历数据失败')
+    
+    // 如果加载失败，清空表单
+    medicalForm.symptoms = ''
+    medicalForm.diagnosis = ''
+    medicalForm.drugs = []
+    medicalForm.advicesText = ''
+    medicalForm.selectedExamination = ''
+    medicalForm.selectedSurgery = ''
+    medicalForm.examinationStatus = ''
+    medicalForm.surgeryStatus = ''
+  }
+  
+  // 设置当前患者
+  currentPatient.value = patient
+  medicalForm.examinationStatus = ''
+  medicalForm.surgeryStatus = ''
+  medicalForm.isDraftSaved = false
+  emit('call-patient', patient)
+}
+
+const callPatient = async (patient) => {
+  try {
+    const doctorId = localStorage.getItem('userId')
+    // 调用后端 API 更新预约状态为"正在就诊"
+    await startConsultationAPI(patient.id, doctorId)
+    ElMessage.success(`已开始接诊：${patient.name}`)
+    expandedPatientId.value = null
+    
+    // 发出刷新列表事件
+    emit('refresh-list')
+  } catch (error) {
+    console.error('开始就诊失败:', error)
+    ElMessage.error('开始就诊失败')
+    return
+  }
+  
   currentPatient.value = patient
   medicalForm.symptoms = ''
   medicalForm.diagnosis = ''
   medicalForm.drugs = []
-  medicalForm.advices = []
+  medicalForm.advicesText = ''
   medicalForm.selectedExamination = ''
   medicalForm.examinationStatus = ''
+  medicalForm.selectedSurgery = ''
+  medicalForm.surgeryStatus = ''
+  medicalForm.isDraftSaved = false
   emit('call-patient', patient)
 }
 
 const addDrug = () => {
-  medicalForm.drugs.push({ name: '', count: 1, usage: '' })
+  medicalForm.drugs.push({ type: '', name: '', count: 1, unit: '', usage: '' })
 }
 
 const removeDrug = (index) => {
   medicalForm.drugs.splice(index, 1)
 }
 
-// 标记检查完成
-const markExaminationComplete = () => {
-  medicalForm.examinationStatus = '已完成'
-  ElMessage.success('检查状态已更新为已完成，现在可以填写最终诊断结果了')
-}
-
 const finishDiagnose = () => {
-  // 检查是否选择了检查但还未完成
-  if (medicalForm.selectedExamination && medicalForm.examinationStatus !== '已完成') {
-    return ElMessage.warning('已申请检查但尚未完成，请等待检查结果或标记检查完成后再提交诊疗')
-  }
-  
+  // 检查是否填写了诊断结果
   if (!medicalForm.diagnosis) {
     return ElMessage.warning('请填写诊断结果')
   }
@@ -280,6 +696,17 @@ const finishDiagnose = () => {
   // 如果有检查申请，添加提醒
   if (medicalForm.selectedExamination) {
     message += `\n\n注意：已申请检查项目：${medicalForm.selectedExamination}`
+    if (medicalForm.examinationResult) {
+      message += `，检查结果：${medicalForm.examinationResult}`
+    }
+  }
+  
+  // 如果有手术申请，添加提醒
+  if (medicalForm.selectedSurgery) {
+    message += `\n\n注意：已申请手术项目：${medicalForm.selectedSurgery}`
+    if (medicalForm.surgeryResult) {
+      message += `，手术结果：${medicalForm.surgeryResult}`
+    }
   }
   
   // 如果有处方，添加提醒
@@ -291,8 +718,67 @@ const finishDiagnose = () => {
     confirmButtonText: '确定提交',
     cancelButtonText: '取消',
     type: 'success'
-  }).then(() => {
-    ElMessage.success('病历提交成功，相关信息已发送至相应部门')
+  }).then(async () => {
+    try {
+      const doctorId = localStorage.getItem('userId')
+      
+      // 查找与该患者相关的最近病历记录
+      const medicalRecordsRes = await getMedicalRecordsByDoctorId(parseInt(doctorId))
+      const medicalRecords = medicalRecordsRes.data || []
+      const patientRecords = medicalRecords.filter(record => 
+        record.appointmentId === currentPatient.value.id
+      )
+      
+      let existingRecordId = null
+      if (patientRecords.length > 0) {
+        // 找到最近的记录
+        const latestRecord = patientRecords[patientRecords.length - 1]
+        existingRecordId = latestRecord.id
+      }
+
+      // 构建病历数据
+      const medicalRecordData = {
+        petId: currentPatient.value.petId || currentPatient.value.id, // 优先使用petId，如果没有则使用id
+        doctorId: parseInt(doctorId),
+        appointmentId: currentPatient.value.id, // 使用预约ID作为病历的关联
+        visitDate: new Date().toISOString().split('T')[0], // 当前日期
+        diagnosis: medicalForm.diagnosis || '',
+        treatment: medicalForm.symptoms || '', // 临床症状作为治疗方案
+        prescription: JSON.stringify({
+          drugs: medicalForm.drugs,
+          advices: medicalForm.advicesText
+        }),
+        examination: medicalForm.selectedExamination || '',
+        examinationResult: medicalForm.examinationResult || '',
+        surgery: medicalForm.selectedSurgery || '',
+        surgeryResult: medicalForm.surgeryResult || '',
+        notes: medicalForm.notes || '',
+        followUpRequired: false,
+        followUpDate: null
+      }
+
+      // 保存病历到数据库
+      if (existingRecordId) {
+        // 更新现有记录
+        await updateMedicalRecord(existingRecordId, medicalRecordData)
+      } else {
+        // 新增记录
+        await addMedicalRecord(medicalRecordData)
+      }
+      
+      // 调用后端 API 更新预约状态为"就诊完成"
+      await finishConsultationAPI(currentPatient.value.id, doctorId)
+      
+      ElMessage.success('病历提交成功，预约状态已更新为就诊完成')
+      
+      // 发出刷新列表事件
+      emit('refresh-list')
+    } catch (error) {
+      console.error('完成就诊失败:', error)
+      ElMessage.error('完成就诊失败')
+      return
+    }
+    
     emit('finish-diagnose', currentPatient.value.id)
     currentPatient.value = null
   })
@@ -318,8 +804,22 @@ defineExpose({
 }
 
 .patient-card.active {
+  border-left-color: #67c23a;
+  background-color: #f0f9ff;
+}
+
+.patient-card.selected {
   border-left-color: #409eff;
   background-color: #ecf5ff;
+}
+
+.patient-card.active .patient-info,
+.patient-card.selected .patient-info {
+  color: #303133;
+}
+
+.patient-info {
+  transition: 0.3s;
 }
 
 .consultation-box {

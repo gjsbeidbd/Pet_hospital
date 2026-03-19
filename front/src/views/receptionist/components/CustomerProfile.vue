@@ -63,14 +63,8 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-card header="客户信息" shadow="never">
-              <el-form-item label="账号">
-                <el-input v-model="customerForm.phone" placeholder="请输入手机号">
-                  <template #append>
-                    <el-tooltip content="手机号就是登录账号" placement="top">
-                      <i class="el-icon-question"></i>
-                    </el-tooltip>
-                  </template>
-                </el-input>
+              <el-form-item label="手机号">
+                <el-input v-model="customerForm.phone" placeholder="请输入手机号"></el-input>
               </el-form-item>
               <el-form-item label="真实姓名">
                 <el-input v-model="customerForm.name" placeholder="请输入真实姓名"></el-input>
@@ -144,14 +138,8 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-card header="客户信息" shadow="never">
-              <el-form-item label="账号">
-                <el-input v-model="editCustomerForm.phone" disabled>
-                  <template #append>
-                    <el-tooltip content="手机号就是登录账号" placement="top">
-                      <i class="el-icon-question"></i>
-                    </el-tooltip>
-                  </template>
-                </el-input>
+              <el-form-item label="手机号">
+                <el-input v-model="editCustomerForm.phone" disabled></el-input>
               </el-form-item>
               <el-form-item label="真实姓名">
                 <el-input v-model="editCustomerForm.name" placeholder="请输入真实姓名"></el-input>

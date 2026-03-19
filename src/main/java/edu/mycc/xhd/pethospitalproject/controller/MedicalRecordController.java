@@ -1,6 +1,7 @@
 package edu.mycc.xhd.pethospitalproject.controller;
 
 import edu.mycc.xhd.pethospitalproject.entity.MedicalRecord;
+import edu.mycc.xhd.pethospitalproject.entity.MedicalRecordDetail;
 import edu.mycc.xhd.pethospitalproject.service.MedicalRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,13 +18,45 @@ public class MedicalRecordController {
     private MedicalRecordService medicalRecordService;
 
     /**
-     * 获取宠物病历列表
-     * @param petId 宠物ID
+     * 获取宠物病历列表（简单数据）
+     * @param petId 宠物 ID
      * @return 病历列表
      */
     @GetMapping
     public ResponseEntity<List<MedicalRecord>> getMedicalRecordsByPetId(@RequestParam Long petId) {
         List<MedicalRecord> medicalRecords = medicalRecordService.getMedicalRecordsByPetId(petId);
+        return ResponseEntity.ok(medicalRecords);
+    }
+        
+    /**
+     * 获取宠物病历详情列表（包含宠物主人、医生信息）
+     * @param petId 宠物 ID
+     * @return 病历详情列表
+     */
+    @GetMapping("/detail")
+    public ResponseEntity<List<MedicalRecordDetail>> getMedicalRecordDetailByPetId(@RequestParam Long petId) {
+        List<MedicalRecordDetail> medicalRecords = medicalRecordService.getMedicalRecordDetailByPetId(petId);
+        return ResponseEntity.ok(medicalRecords);
+    }
+    
+    /**
+     * 获取所有病历详情（包含宠物、主人、医生信息）
+     * @return 病历详情列表
+     */
+    @GetMapping("/all")
+    public ResponseEntity<List<MedicalRecordDetail>> getAllMedicalRecordDetail() {
+        List<MedicalRecordDetail> medicalRecords = medicalRecordService.getAllMedicalRecordDetail();
+        return ResponseEntity.ok(medicalRecords);
+    }
+    
+    /**
+     * 根据科室获取病历详情
+     * @param department 科室
+     * @return 病历详情列表
+     */
+    @GetMapping("/department")
+    public ResponseEntity<List<MedicalRecordDetail>> getMedicalRecordDetailByDepartment(@RequestParam String department) {
+        List<MedicalRecordDetail> medicalRecords = medicalRecordService.getMedicalRecordDetailByDepartment(department);
         return ResponseEntity.ok(medicalRecords);
     }
 

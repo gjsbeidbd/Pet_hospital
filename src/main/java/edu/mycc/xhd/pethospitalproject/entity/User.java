@@ -1,8 +1,11 @@
 package edu.mycc.xhd.pethospitalproject.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+
+import java.time.LocalDateTime;
 
 @TableName("users")
 public class User {
@@ -14,10 +17,12 @@ public class User {
     private String phone;
     private String email;
     private String address;
-    private String image; // 头像图片路径
-    private String role; // USER, RECEPTIONIST, DOCTOR, ADMIN
-    private java.time.LocalDateTime createdAt; // 创建时间
-    private java.time.LocalDateTime updatedAt; // 更新时间
+    private String image;
+    private String role;
+    @TableField("created_at")
+    private LocalDateTime createdAt;
+    @TableField("updated_at")
+    private LocalDateTime updatedAt;
 
     // Constructors
     public User() {}
@@ -107,19 +112,19 @@ public class User {
         this.role = role;
     }
 
-    public java.time.LocalDateTime getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(java.time.LocalDateTime createdAt) {
+    public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 
-    public java.time.LocalDateTime getUpdatedAt() {
+    public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(java.time.LocalDateTime updatedAt) {
+    public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
 

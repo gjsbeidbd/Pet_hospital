@@ -152,6 +152,16 @@ export const getMedicalRecordsByDoctorId = (doctorId) => {
   return api.get(`/api/medical-records/doctor?doctorId=${doctorId}`);
 };
 
+// 获取所有病历详情
+export const getAllMedicalRecordDetail = () => {
+  return api.get('/api/medical-records/all');
+};
+
+// 根据科室获取病历详情
+export const getMedicalRecordDetailByDepartment = (department) => {
+  return api.get(`/api/medical-records/department?department=${encodeURIComponent(department)}`);
+};
+
 // 添加病历
 export const addMedicalRecord = (medicalRecordData) => {
   return api.post('/api/medical-records', medicalRecordData);
@@ -200,6 +210,10 @@ export const saveDoctorSchedulesBatch = (data) => {
   return api.post('/api/doctor-schedules/batch', data);
 };
 
+export const updateDoctorSchedule = (data) => {
+  return api.put('/api/doctor-schedules', data);
+};
+
 // 删除医生排班
 export const deleteDoctorSchedule = (id) => {
   return api.delete(`/api/doctor-schedules/${id}`);
@@ -234,6 +248,10 @@ export const saveReceptionistSchedulesBatch = (data) => {
   return api.post('/api/receptionist-schedules/batch', data);
 };
 
+export const updateReceptionistSchedule = (data) => {
+  return api.put('/api/receptionist-schedules', data);
+};
+
 // 删除前台排班
 export const deleteReceptionistSchedule = (id) => {
   return api.delete(`/api/receptionist-schedules/${id}`);
@@ -264,6 +282,38 @@ export const updateFeeItem = (feeId, feeData) => {
 // 删除收费项目
 export const deleteFeeItem = (feeId) => {
   return api.delete(`/api/fee-items/${feeId}`);
+};
+
+// ==================== 账单管理相关 ====================
+
+// 获取待缴费列表
+export const getPendingBillings = () => {
+  return api.get('/api/billing/pending');
+};
+
+// 获取用户待缴费列表
+export const getPendingBillingsByUserId = (userId) => {
+  return api.get(`/api/billing/pending/user/${userId}`);
+};
+
+// 支付账单
+export const payBilling = (id, paymentMethod) => {
+  return api.post(`/api/billing/pay/${id}`, { paymentMethod });
+};
+
+// 创建账单
+export const addBilling = (billingData) => {
+  return api.post('/api/billing', billingData);
+};
+
+// 获取账单详情
+export const getBillingById = (id) => {
+  return api.get(`/api/billing/${id}`);
+};
+
+// 获取账单明细
+export const getBillingItems = (id) => {
+  return api.get(`/api/billing/${id}/items`);
 };
 
 // ==================== 宠物种类管理相关 ====================
@@ -451,6 +501,43 @@ export const startConsultation = (appointmentId, doctorId) => {
 
 export const finishConsultation = (appointmentId, doctorId) => {
   return api.put(`/api/appointments/${appointmentId}/finish-consultation?doctorId=${doctorId}`);
+};
+
+// 统计相关 API
+export const getTodayCompletedCount = () => {
+  return api.get('/api/appointments/today-completed/count');
+};
+
+export const getPendingBillingCount = () => {
+  return api.get('/api/billing/pending/count');
+};
+
+export const getTodayNewUsersCount = () => {
+  return api.get('/api/users/today-new/count');
+};
+
+export const getTodayRevenue = () => {
+  return api.get('/api/billing/today-revenue');
+};
+
+export const getMonthCompletedCount = () => {
+  return api.get('/api/appointments/month-completed');
+};
+
+export const getDepartmentCount = () => {
+  return api.get('/api/appointments/department-count');
+};
+
+export const getTotalUsersCount = () => {
+  return api.get('/api/users/total/count');
+};
+
+export const getLastSevenDaysRevenue = () => {
+  return api.get('/api/billing/last-seven-days');
+};
+
+export const getDrugWarningCount = () => {
+  return api.get('/api/drug-inventory/warning/count');
 };
 
 export default api;

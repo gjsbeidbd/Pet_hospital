@@ -89,7 +89,7 @@ public class UserController {
     public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id) {
         boolean success = userService.deleteUser(id);
         Map<String, String> response = new HashMap<>();
-        
+
         if (success) {
             response.put("message", "账户注销成功");
             return ResponseEntity.ok(response);
@@ -97,5 +97,17 @@ public class UserController {
             response.put("error", "账户注销失败");
             return ResponseEntity.badRequest().body(response);
         }
+    }
+
+    @GetMapping("/today-new/count")
+    public ResponseEntity<Map<String, Object>> getTodayNewUsersCount() {
+        int count = userService.getTodayNewUsersCount();
+        return ResponseEntity.ok(Map.of("data", count));
+    }
+
+    @GetMapping("/total/count")
+    public ResponseEntity<Map<String, Object>> getTotalUsersCount() {
+        long count = userService.getTotalUsersCount();
+        return ResponseEntity.ok(Map.of("data", count));
     }
 }

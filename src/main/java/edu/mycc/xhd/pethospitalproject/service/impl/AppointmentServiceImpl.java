@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appointment> implements AppointmentService {
@@ -44,8 +45,10 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
             }
         }
         
-        // 设置默认状态为pending
-        appointment.setStatus("pending");
+        // 如果没有指定状态，默认设置为pending；如果是现场挂号可能传入waiting
+        if (appointment.getStatus() == null || appointment.getStatus().isEmpty()) {
+            appointment.setStatus("pending");
+        }
         appointment.setCreatedAt(LocalDateTime.now());
         appointment.setUpdatedAt(LocalDateTime.now());
         baseMapper.insert(appointment);
@@ -124,10 +127,31 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
     public Appointment finishConsultation(Long appointmentId) {
         Appointment appointment = baseMapper.selectById(appointmentId);
         if (appointment != null) {
-            appointment.setStatus("completed");
+            appointment.setStatus("pending_payment");
             appointment.setUpdatedAt(LocalDateTime.now());
             baseMapper.updateById(appointment);
         }
         return appointment;
+    }
+
+    @Override
+    public int getTodayCompletedCount() {
+        QueryWrapper<Appointment> wrapper = new QueryWrapper<>();
+        wrapper.eq("status", "completed");
+        wrapper.apply("DATE(appointment_date) = CURRENT_DATE");
+        return baseMapper.selectCount(wrapper).intValue();
+    }
+
+    @Override
+    public int getMonthCompletedCount() {
+        QueryWrapper<Appointment> wrapper = new QueryWrapper<>();
+        wrapper.eq("status", "completed");
+        wrapper.apply("YEAR(appointment_date) = YEAR(CURRENT_DATE) AND MONTH(appointment_date) = MONTH(CURRENT_DATE)");
+        return baseMapper.selectCount(wrapper).intValue();
+    }
+
+    @Override
+    public List<Map<String, Object>> getAppointmentCountByDepartment() {
+        return appointmentMapper.selectAppointmentCountByDepartment();
     }
 }

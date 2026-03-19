@@ -84,6 +84,9 @@ public class AuthController {
         String username = registerRequest.get("username");
         String password = registerRequest.get("password");
         String role = registerRequest.get("role");
+        if (role == null || role.isEmpty()) {
+            role = "USER";
+        }
 
         boolean success = userService.register(username, password, role);
 

@@ -5,6 +5,7 @@ import edu.mycc.xhd.pethospitalproject.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -34,11 +35,15 @@ public class UserService {
      * @return 是否注册成功
      */
     public boolean register(String phoneOrEmail, String password, String role) {
-        // 检查手机号是否已存在
-        if (userMapper.countByPhone(phoneOrEmail) > 0) {
+        if (phoneOrEmail == null || phoneOrEmail.isEmpty()) {
             return false;
         }
-        
+
+        // 检查手机号是否已存在
+        if (!phoneOrEmail.contains("@") && userMapper.countByPhone(phoneOrEmail) > 0) {
+            return false;
+        }
+
         // 检查邮箱是否已存在
         if (phoneOrEmail.contains("@") && userMapper.countByEmail(phoneOrEmail) > 0) {
             return false;
@@ -47,20 +52,24 @@ public class UserService {
         // 创建新用户
         User user = new User();
         user.setPassword(password);
-        user.setRole(role);
-        
+        user.setRole(role != null ? role : "USER");
+
+        // 设置用户名为手机号或邮箱（用于显示）
+        user.setName(phoneOrEmail);
+
         // 设置手机号或邮箱
         if (phoneOrEmail.contains("@")) {
             user.setEmail(phoneOrEmail);
         } else {
             user.setPhone(phoneOrEmail);
         }
-        
+
         // 设置用户名为手机号或邮箱
         user.setUsername(phoneOrEmail);
-        
-        // 其他字段使用默认空值
-        
+
+        // 设置创建时间
+        user.setCreatedAt(LocalDateTime.now());
+
         int result = userMapper.insert(user);
         return result > 0;
     }
@@ -175,5 +184,18 @@ public class UserService {
     public boolean deleteUser(Long id) {
         int result = userMapper.deleteById(id);
         return result > 0;
+    }
+
+    /**
+     * 获取今日新增用户数量
+     *
+     * @return 今日新增用户数量
+     */
+    public int getTodayNewUsersCount() {
+        return userMapper.selectTodayNewUsersCount();
+    }
+
+    public long getTotalUsersCount() {
+        return userMapper.selectCount(null);
     }
 }

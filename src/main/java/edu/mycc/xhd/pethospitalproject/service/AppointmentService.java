@@ -3,6 +3,7 @@ package edu.mycc.xhd.pethospitalproject.service;
 import edu.mycc.xhd.pethospitalproject.entity.Appointment;
 
 import java.util.List;
+import java.util.Map;
 
 public interface AppointmentService {
     // 根据用户ID获取预约列表
@@ -34,4 +35,11 @@ public interface AppointmentService {
 
     // 更新预约状态
     Appointment updateAppointmentStatus(Long appointmentId, String status);
+
+    // 获取今日已完成预约数量
+    int getTodayCompletedCount();
+
+    int getMonthCompletedCount();
+
+    List<Map<String, Object>> getAppointmentCountByDepartment();
 }

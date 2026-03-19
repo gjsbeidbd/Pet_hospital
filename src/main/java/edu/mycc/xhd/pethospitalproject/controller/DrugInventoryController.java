@@ -3,9 +3,11 @@ package edu.mycc.xhd.pethospitalproject.controller;
 import edu.mycc.xhd.pethospitalproject.entity.DrugInventory;
 import edu.mycc.xhd.pethospitalproject.service.DrugInventoryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 药品库存管理 Controller
@@ -67,5 +69,14 @@ public class DrugInventoryController {
     @DeleteMapping("/{id}")
     public void deleteDrug(@PathVariable Long id) {
         drugInventoryService.removeById(id);
+    }
+
+    /**
+     * 获取库存预警数量
+     */
+    @GetMapping("/warning/count")
+    public ResponseEntity<Map<String, Object>> getWarningCount() {
+        long count = drugInventoryService.getWarningCount();
+        return ResponseEntity.ok(Map.of("data", count));
     }
 }

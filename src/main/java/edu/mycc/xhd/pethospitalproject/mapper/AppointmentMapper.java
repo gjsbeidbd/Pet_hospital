@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.type.JdbcType;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface AppointmentMapper extends BaseMapper<Appointment> {
@@ -46,4 +47,9 @@ public interface AppointmentMapper extends BaseMapper<Appointment> {
         @Result(property = "updatedAt", column = "updated_at", jdbcType = JdbcType.TIMESTAMP)
     })
     List<Appointment> selectAllAppointments();
+
+    @Select("SELECT department, COUNT(*) as count FROM appointments " +
+            "WHERE YEAR(appointment_date) = YEAR(CURRENT_DATE) AND MONTH(appointment_date) = MONTH(CURRENT_DATE) " +
+            "GROUP BY department ORDER BY count DESC")
+    List<Map<String, Object>> selectAppointmentCountByDepartment();
 }

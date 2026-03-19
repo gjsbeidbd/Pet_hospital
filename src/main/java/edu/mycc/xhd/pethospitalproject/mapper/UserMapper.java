@@ -26,4 +26,7 @@ public interface UserMapper extends BaseMapper<User> {
     
     @Select("SELECT COUNT(*) FROM users WHERE phone = #{phone}")
     int countByPhone(@Param("phone") String phone);
+
+    @Select("SELECT COUNT(*) FROM users WHERE DATE(created_at) = CURRENT_DATE")
+    int selectTodayNewUsersCount();
 }

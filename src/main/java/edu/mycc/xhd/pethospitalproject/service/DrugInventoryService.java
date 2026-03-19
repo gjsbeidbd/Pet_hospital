@@ -32,4 +32,14 @@ public class DrugInventoryService extends ServiceImpl<DrugInventoryMapper, DrugI
                 .orderByDesc(DrugInventory::getCreatedAt)
                 .list();
     }
+
+    /**
+     * 获取库存预警数量（库存低于预警值的药品数量）
+     */
+    public long getWarningCount() {
+        return lambdaQuery()
+                .eq(DrugInventory::getIsActive, true)
+                .apply("stock < warning_stock")
+                .count();
+    }
 }

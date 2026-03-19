@@ -288,7 +288,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Service, Refresh, Plus, Delete, ArrowRight, ArrowDown } from '@element-plus/icons-vue'
-import { startConsultation as startConsultationAPI, finishConsultation as finishConsultationAPI, getFeeItems, addMedicalRecord, getMedicalRecordsByDoctorId, updateMedicalRecord } from '@/services/api'
+import { startConsultation as startConsultationAPI, finishConsultation as finishConsultationAPI, getFeeItems, addMedicalRecord, getMedicalRecordsByDoctorId, updateMedicalRecord, addBilling } from '@/services/api'
 
 // 定义props
 const props = defineProps({
@@ -502,12 +502,12 @@ const saveDraft = async () => {
 
     // 构建病历数据
       const medicalRecordData = {
-        petId: currentPatient.value.id, // 这里需要获取实际的宠物ID
+        petId: currentPatient.value.petId || currentPatient.value.id,
         doctorId: parseInt(doctorId),
-        appointmentId: currentPatient.value.id, // 使用预约ID作为病历的关联
-        visitDate: new Date().toISOString().split('T')[0], // 当前日期
+        appointmentId: currentPatient.value.id,
+        visitDate: new Date().toISOString().split('T')[0],
         diagnosis: medicalForm.diagnosis || '',
-        treatment: medicalForm.symptoms || '', // 临床症状作为治疗方案
+        treatment: medicalForm.symptoms || '',
         prescription: JSON.stringify({
           drugs: medicalForm.drugs,
           advices: medicalForm.advicesText
@@ -766,10 +766,13 @@ const finishDiagnose = () => {
         await addMedicalRecord(medicalRecordData)
       }
       
+      // 创建账单和账单明细
+      await createBillingForConsultation()
+      
       // 调用后端 API 更新预约状态为"就诊完成"
       await finishConsultationAPI(currentPatient.value.id, doctorId)
       
-      ElMessage.success('病历提交成功，预约状态已更新为就诊完成')
+      ElMessage.success('病历提交成功，账单已生成，请前往缴费')
       
       // 发出刷新列表事件
       emit('refresh-list')
@@ -782,6 +785,115 @@ const finishDiagnose = () => {
     emit('finish-diagnose', currentPatient.value.id)
     currentPatient.value = null
   })
+}
+
+// 创建账单
+const createBillingForConsultation = async () => {
+  try {
+    const billingItems = []
+    const feeItemsRes = await getFeeItems()
+    const feeItems = feeItemsRes.data || []
+    
+    // 1. 添加挂号费（根据医生级别）
+    const doctorTitle = currentPatient.value.doctorTitle || '主治医师'
+    let registrationFee = null
+    if (doctorTitle.includes('主任') || doctorTitle.includes('专家')) {
+      registrationFee = feeItems.find(item => item.itemName.includes('专家') && item.category === '诊查费')
+    } else {
+      registrationFee = feeItems.find(item => item.itemName.includes('普通') && item.category === '诊查费')
+    }
+    
+    if (registrationFee) {
+      billingItems.push({
+        itemName: registrationFee.itemName,
+        category: '挂号费',
+        quantity: 1,
+        unitPrice: registrationFee.unitPrice,
+        totalPrice: registrationFee.unitPrice,
+        unit: registrationFee.unit || '次',
+        description: doctorTitle.includes('主任') ? '主任医师及以上专家门诊诊查费' : '主治医生普通门诊诊查费'
+      })
+    }
+    
+    // 2. 添加检查费
+    if (medicalForm.selectedExamination) {
+      const examFee = feeItems.find(item => item.itemName === medicalForm.selectedExamination && item.category === '检查费')
+      if (examFee) {
+        billingItems.push({
+          itemName: examFee.itemName,
+          category: '检查费',
+          quantity: 1,
+          unitPrice: examFee.unitPrice,
+          totalPrice: examFee.unitPrice,
+          unit: examFee.unit || '次',
+          description: medicalForm.examinationResult || ''
+        })
+      }
+    }
+    
+    // 3. 添加手术费
+    if (medicalForm.selectedSurgery) {
+      const surgeryFee = feeItems.find(item => item.itemName === medicalForm.selectedSurgery && item.category === '手术费')
+      if (surgeryFee) {
+        billingItems.push({
+          itemName: surgeryFee.itemName,
+          category: '手术费',
+          quantity: 1,
+          unitPrice: surgeryFee.unitPrice,
+          totalPrice: surgeryFee.unitPrice,
+          unit: surgeryFee.unit || '台',
+          description: medicalForm.surgeryResult || ''
+        })
+      }
+    }
+    
+    // 4. 添加药品费
+    if (medicalForm.drugs && medicalForm.drugs.length > 0) {
+      for (const drug of medicalForm.drugs) {
+        // 优先从drugOptions中获取价格（因为那里有完整的药品信息）
+        const drugFromOptions = props.drugOptions.find(item => item.name === drug.name)
+        let unitPrice = 0
+        let unit = '盒'
+
+        if (drugFromOptions) {
+          unitPrice = drugFromOptions.price || 0
+          unit = drugFromOptions.unit || '盒'
+        } else {
+          // 如果drugOptions中没有，则从feeItems中查找
+          const drugFee = feeItems.find(item => item.itemName === drug.name && item.category === '药品费')
+          if (drugFee) {
+            unitPrice = drugFee.unitPrice
+            unit = drugFee.unit || '盒'
+          }
+        }
+
+        billingItems.push({
+          itemName: drug.name,
+          category: '药品费',
+          quantity: drug.count || 1,
+          unitPrice: unitPrice,
+          totalPrice: unitPrice * (drug.count || 1),
+          unit: drug.unit || unit,
+          description: drug.usage || ''
+        })
+      }
+    }
+    
+    // 如果有费用项目，创建账单
+    if (billingItems.length > 0) {
+      const billingData = {
+        userId: currentPatient.value.ownerId || localStorage.getItem('userId'),
+        appointmentId: currentPatient.value.id,
+        description: billingItems.map(item => item.itemName).join('、'),
+        items: billingItems
+      }
+      
+      await addBilling(billingData)
+      console.log('账单创建成功，明细：', billingItems)
+    }
+  } catch (error) {
+    console.error('创建账单失败:', error)
+  }
 }
 
 // 暴露给父组件的方法

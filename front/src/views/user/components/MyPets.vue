@@ -32,6 +32,7 @@
       <!-- 添加宠物卡片 -->
       <el-col :span="6">
         <el-card class="pet-card-add" :body-style="{ padding: '0px' }" @click="openAddPetDialog">
+          <img src="" class="pet-img" style="visibility: hidden;">
           <div class="add-pet-content">
             <el-icon :size="40"><Plus /></el-icon>
             <div style="margin-top: 10px;">添加宠物</div>
@@ -47,19 +48,22 @@
           <el-input v-model="petForm.name" placeholder="请输入宠物名称"></el-input>
         </el-form-item>
         <el-form-item label="种类">
-          <el-radio-group v-model="petForm.species">
-            <el-radio label="狗">狗</el-radio>
-            <el-radio label="猫">猫</el-radio>
-            <el-radio label="其他">其他</el-radio>
-          </el-radio-group>
+          <el-select v-model="petForm.species" placeholder="请选择种类" style="width: 100%" @change="onSpeciesChange">
+            <el-option 
+              v-for="species in speciesList" 
+              :key="species.id" 
+              :label="species.speciesName" 
+              :value="species.speciesName">
+            </el-option>
+          </el-select>
         </el-form-item>
         <el-form-item label="品种">
-          <el-select v-model="petForm.breed" placeholder="请选择品种" style="width: 100%" filterable>
+          <el-select v-model="petForm.breed" placeholder="请选择品种" style="width: 100%" filterable :disabled="!petForm.species">
             <el-option 
-              v-for="breed in currentBreedOptions" 
-              :key="breed" 
-              :label="breed" 
-              :value="breed">
+              v-for="breed in breedList" 
+              :key="breed.id" 
+              :label="breed.breedName" 
+              :value="breed.breedName">
             </el-option>
           </el-select>
         </el-form-item>
@@ -68,6 +72,12 @@
         </el-form-item>
         <el-form-item label="体重(kg)">
           <el-input-number v-model="petForm.weight" :min="0" :precision="1" placeholder="宠物体重"></el-input-number>
+        </el-form-item>
+        <el-form-item label="性别">
+          <el-select v-model="petForm.gender" placeholder="请选择性别" style="width: 100%">
+            <el-option label="雄性" value="雄性"></el-option>
+            <el-option label="雌性" value="雌性"></el-option>
+          </el-select>
         </el-form-item>
         <el-form-item label="病史">
           <el-input 
@@ -94,15 +104,16 @@
 import { ref, reactive, computed, defineProps, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getUserPets, addPet, updatePet, deletePet } from '@/services/api'
+import { getUserPets, addPet, updatePet, deletePet, getPetSpecies, getPetBreedsBySpeciesId } from '@/services/api'
 
-// 定义props
-const props = defineProps({
-  breedOptionsMap: {
-    type: Object,
-    required: true
-  }
-})
+// 种类列表
+const speciesList = ref([])
+
+// 品种列表
+const breedList = ref([])
+
+// 种类ID映射（种类名称 -> 种类ID）
+const speciesIdMap = ref({})
 
 // 弹窗控制
 const dialogVisible = ref(false)
@@ -116,17 +127,46 @@ const pets = ref([])
 // 宠物表单
 const petForm = reactive({
   name: '',
-  species: '狗', // 默认选中狗
+  species: '',
   breed: '',
   age: null,
   weight: null,
+  gender: '雄性',
   medicalHistory: ''
 })
 
-// 计算属性：当前品种选项
-const currentBreedOptions = computed(() => {
-  return props.breedOptionsMap[petForm.species] || []
-})
+// 获取种类列表
+const fetchSpeciesList = async () => {
+  try {
+    const response = await getPetSpecies()
+    speciesList.value = response.data || []
+    // 建立种类名称到ID的映射
+    speciesIdMap.value = {}
+    speciesList.value.forEach(species => {
+      speciesIdMap.value[species.speciesName] = species.id
+    })
+  } catch (error) {
+    console.error('获取种类列表失败:', error)
+    ElMessage.error('获取种类列表失败')
+  }
+}
+
+// 种类变化时获取对应品种
+const onSpeciesChange = async (speciesName) => {
+  petForm.breed = ''
+  breedList.value = []
+  
+  const speciesId = speciesIdMap.value[speciesName]
+  if (speciesId) {
+    try {
+      const response = await getPetBreedsBySpeciesId(speciesId)
+      breedList.value = response.data || []
+    } catch (error) {
+      console.error('获取品种列表失败:', error)
+      ElMessage.error('获取品种列表失败')
+    }
+  }
+}
 
 // 获取用户宠物列表
 const fetchPets = async () => {
@@ -149,25 +189,38 @@ const fetchPets = async () => {
 const openAddPetDialog = () => {
   // 重置表单
   petForm.name = ''
-  petForm.species = '狗'
+  petForm.species = ''
   petForm.breed = ''
   petForm.age = null
   petForm.weight = null
   petForm.medicalHistory = ''
+  breedList.value = []
   editingPet.value = null
   dialogVisible.value = true
 }
 
 // 处理编辑宠物
-const handleEditPet = (pet) => {
+const handleEditPet = async (pet) => {
   // 将宠物数据加载到表单中
   petForm.name = pet.name
   petForm.species = pet.species
   petForm.breed = pet.breed
   petForm.age = pet.age
   petForm.weight = pet.weight
+  petForm.gender = pet.gender || '雄性'
   petForm.medicalHistory = pet.medicalHistory
-  
+
+  // 获取对应种类的品种列表
+  const speciesId = speciesIdMap.value[pet.species]
+  if (speciesId) {
+    try {
+      const response = await getPetBreedsBySpeciesId(speciesId)
+      breedList.value = response.data || []
+    } catch (error) {
+      console.error('获取品种列表失败:', error)
+    }
+  }
+
   // 设置编辑状态
   editingPet.value = pet
   dialogVisible.value = true
@@ -178,13 +231,13 @@ const addPetHandler = async () => {
   if (!petForm.name || !petForm.breed) {
     return ElMessage.error('请填写完整的宠物信息')
   }
-  
+
   try {
     const userId = localStorage.getItem('userId')
     if (!userId) {
       return ElMessage.error('用户信息不存在，请重新登录')
     }
-    
+
     const petData = {
       userId: parseInt(userId),
       name: petForm.name,
@@ -192,8 +245,8 @@ const addPetHandler = async () => {
       breed: petForm.breed,
       age: petForm.age || 0,
       weight: petForm.weight || 0,
-      medicalHistory: petForm.medicalHistory,
-      gender: 'male' // 默认性别
+      medicalHistory: petForm.medicalHistory || '',
+      gender: petForm.gender
     }
     
     const response = await addPet(petData)
@@ -230,7 +283,7 @@ const updatePetHandler = async () => {
       age: petForm.age || 0,
       weight: petForm.weight || 0,
       medicalHistory: petForm.medicalHistory,
-      gender: editingPet.value.gender // 保持原有性别
+      gender: petForm.gender
     }
     
     const response = await updatePet(editingPet.value.id, petData)
@@ -274,9 +327,10 @@ const handleDeletePet = (petId) => {
   })
 }
 
-// 在组件挂载时获取宠物列表
+// 在组件挂载时获取宠物列表和种类列表
 onMounted(() => {
   fetchPets()
+  fetchSpeciesList()
 })
 </script>
 
@@ -284,12 +338,19 @@ onMounted(() => {
 .pet-card-add {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
   transition: transform 0.3s;
   margin-bottom: 20px;
   height: 100%;
+  position: relative;
+}
+
+.pet-card-add :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  position: relative;
 }
 
 .pet-card-add:hover {
@@ -297,7 +358,6 @@ onMounted(() => {
 }
 
 .pet-card-add:hover .add-pet-content {
-  border-color: #409EFF !important;
   color: #409EFF !important;
 }
 
@@ -323,10 +383,12 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 200px;
-  border: 2px dashed #ccc;
-  border-radius: 4px;
   color: #ccc;
   transition: all 0.3s;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 </style>

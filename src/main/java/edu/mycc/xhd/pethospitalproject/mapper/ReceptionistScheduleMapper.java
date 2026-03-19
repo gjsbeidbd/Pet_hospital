@@ -35,7 +35,10 @@ public interface ReceptionistScheduleMapper extends BaseMapper<ReceptionistSched
         @Param("receptionistId") Long receptionistId,
         @Param("startDate") String startDate,
         @Param("endDate") String endDate);
-    
+
+    @Select("SELECT * FROM receptionist_schedules WHERE department = #{department} AND schedule_date = #{scheduleDate} AND shift_type = #{shiftType} LIMIT 1")
+    ReceptionistSchedule findByDepartmentAndDateAndShift(@Param("department") String department, @Param("scheduleDate") String scheduleDate, @Param("shiftType") String shiftType);
+
     /**
      * 根据日期范围删除排班
      */

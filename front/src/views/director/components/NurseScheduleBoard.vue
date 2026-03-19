@@ -72,6 +72,7 @@
                 :key="day.date"
                 class="edit-cell"
                 :class="{ 'weekend': day.isWeekend }"
+                @click="openEditDialog(dept, shift, day)"
               >
                 <template v-if="getScheduleValue(dept, shift, day.date) === '休息'">
                   <el-tag size="small" type="info">休息</el-tag>
@@ -129,6 +130,36 @@
         <el-button type="primary" @click="confirmAutoSchedule" :loading="isAutoScheduling">确认排班</el-button>
       </template>
     </el-dialog>
+
+    <!-- 编辑排班弹窗 -->
+    <el-dialog v-model="editDialogVisible" title="修改排班" width="500px">
+      <el-form :model="editForm" label-width="80px">
+        <el-form-item label="科室">
+          <span>{{ editForm.department }}</span>
+        </el-form-item>
+        <el-form-item label="日期">
+          <span>{{ editForm.date }} ({{ editForm.dayLabel }})</span>
+        </el-form-item>
+        <el-form-item label="班次">
+          <span>{{ editForm.shift }}</span>
+        </el-form-item>
+        <el-form-item label="护士">
+          <el-select v-model="editForm.receptionistId" placeholder="选择护士或休息" clearable>
+            <el-option label="休息" value="rest" />
+            <el-option
+              v-for="nurse in editForm.nurses"
+              :key="nurse.id"
+              :label="nurse.name"
+              :value="nurse.id.toString()"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmEdit" :loading="isSaving">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -136,7 +167,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { MagicStick } from '@element-plus/icons-vue'
-import { getAllNurses, getAllNurseSchedules, saveReceptionistSchedulesBatch } from '@/services/api'
+import { getAllNurses, getAllNurseSchedules, saveReceptionistSchedulesBatch, updateReceptionistSchedule } from '@/services/api'
 
 const selectedMonth = ref('')
 const selectedDepartment = ref('')
@@ -147,6 +178,17 @@ const isLoading = ref(false)
 const isAutoScheduling = ref(false)
 
 const autoScheduleDialogVisible = ref(false)
+const editDialogVisible = ref(false)
+const isSaving = ref(false)
+
+const editForm = ref({
+  department: '',
+  date: '',
+  dayLabel: '',
+  shift: '',
+  receptionistId: '',
+  nurses: []
+})
 
 const SHIFT_NAMES = ['白班']
 
@@ -326,6 +368,63 @@ const confirmAutoSchedule = async () => {
     ElMessage.error('一键排班失败')
   } finally {
     isAutoScheduling.value = false
+  }
+}
+
+const openEditDialog = (dept, shift, day) => {
+  const nurses = getNursesByDept(dept)
+  const currentReceptionistId = getScheduleValue(dept, shift, day.date)
+
+  let dayLabel = day.label
+  if (day.isWeekend) {
+    dayLabel += ' (周末)'
+  }
+
+  editForm.value = {
+    department: dept,
+    date: day.date,
+    dayLabel: dayLabel,
+    shift: shift,
+    receptionistId: currentReceptionistId === '休息' ? 'rest' : currentReceptionistId,
+    nurses: nurses
+  }
+  editDialogVisible.value = true
+}
+
+const confirmEdit = async () => {
+  isSaving.value = true
+
+  try {
+    let receptionistId = null
+    let status = 'active'
+
+    if (editForm.value.receptionistId === 'rest' || editForm.value.receptionistId === '') {
+      status = 'rest'
+    } else {
+      receptionistId = parseInt(editForm.value.receptionistId)
+    }
+
+    const scheduleData = {
+      receptionistId: receptionistId,
+      department: editForm.value.department,
+      scheduleDate: editForm.value.date,
+      shiftType: editForm.value.shift,
+      startTime: editForm.value.shift === '白班' ? '08:00:00' : '08:00:00',
+      endTime: editForm.value.shift === '白班' ? '17:00:00' : '17:00:00',
+      status: status
+    }
+
+    await updateReceptionistSchedule(scheduleData)
+
+    await fetchScheduleData()
+
+    editDialogVisible.value = false
+    ElMessage.success('排班修改成功')
+  } catch (error) {
+    console.error('修改排班失败:', error)
+    ElMessage.error('修改排班失败')
+  } finally {
+    isSaving.value = false
   }
 }
 
@@ -533,6 +632,11 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   font-size: 12px;
+  cursor: pointer;
+}
+
+.edit-cell:hover {
+  background: #f0f9ff;
 }
 
 .edit-cell.weekend {

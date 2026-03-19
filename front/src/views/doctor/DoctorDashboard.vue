@@ -7,7 +7,7 @@ import {
   ElMessage,
 } from 'element-plus'
 import { useRouter } from 'vue-router'
-import { getDoctorInfo, getAllAppointmentsByDepartment } from '@/services/api'
+import { getDoctorInfo, getAllAppointmentsByDepartment, getDrugInventory } from '@/services/api'
 import Layout from '@/components/Layout.vue'
 
 // 导入子组件
@@ -51,12 +51,12 @@ const menuList = [
     children: [
       {
         index: '4-1',
-        title: '修改个人信息',
+        title: '信息管理',
         icon: 'Edit'
       },
       {
         index: '4-2',
-        title: '账户密码修改',
+        title: '账户管理',
         icon: 'Lock'
       }
     ]
@@ -65,78 +65,31 @@ const menuList = [
 
 const waitingList = ref([])
 const doctorInfo = ref(null)
+const drugOptions = ref([])
 
-const drugOptions = [
-  // 抗生素类
-  { id: 1, name: '阿莫西林胶囊', type: '抗生素', stock: 100, unit: '盒' },
-  { id: 2, name: '头孢克肟片', type: '抗生素', stock: 80, unit: '盒' },
-  { id: 3, name: '多西环素片', type: '抗生素', stock: 120, unit: '盒' },
-  { id: 4, name: '克林霉素胶囊', type: '抗生素', stock: 60, unit: '盒' },
-  { id: 5, name: '甲硝唑片', type: '抗生素', stock: 150, unit: '盒' },
-  
-  // 消炎药类
-  { id: 6, name: '布洛芬片', type: '消炎药', stock: 200, unit: '盒' },
-  { id: 7, name: '双氯芬酸钠片', type: '消炎药', stock: 150, unit: '盒' },
-  { id: 8, name: '美洛昔康片', type: '消炎药', stock: 100, unit: '盒' },
-  { id: 9, name: '泼尼松龙片', type: '消炎药', stock: 120, unit: '盒' },
-  { id: 10, name: '地塞米松片', type: '消炎药', stock: 180, unit: '盒' },
-  
-  // 疫苗类
-  { id: 11, name: '狂犬病疫苗', type: '疫苗', stock: 50, unit: '支' },
-  { id: 12, name: '犬瘟热疫苗', type: '疫苗', stock: 60, unit: '支' },
-  { id: 13, name: '猫三联疫苗', type: '疫苗', stock: 45, unit: '支' },
-  { id: 14, name: '犬细小病毒疫苗', type: '疫苗', stock: 70, unit: '支' },
-  { id: 15, name: '猫白血病疫苗', type: '疫苗', stock: 40, unit: '支' },
-  
-  // 驱虫药类
-  { id: 16, name: '吡喹酮片', type: '驱虫药', stock: 90, unit: '盒' },
-  { id: 17, name: '伊维菌素滴剂', type: '驱虫药', stock: 75, unit: '盒' },
-  { id: 18, name: '芬苯达唑片', type: '驱虫药', stock: 110, unit: '盒' },
-  { id: 19, name: '塞拉菌素滴剂', type: '驱虫药', stock: 65, unit: '盒' },
-  { id: 20, name: '米尔贝肟片', type: '驱虫药', stock: 85, unit: '盒' },
-  
-  // 营养补充剂类
-  { id: 21, name: '复合维生素片', type: '营养补充剂', stock: 120, unit: '瓶' },
-  { id: 22, name: '钙片', type: '营养补充剂', stock: 150, unit: '瓶' },
-  { id: 23, name: '鱼油软胶囊', type: '营养补充剂', stock: 80, unit: '瓶' },
-  { id: 24, name: '益生菌粉', type: '营养补充剂', stock: 100, unit: '盒' },
-  { id: 25, name: '关节保健片', type: '营养补充剂', stock: 60, unit: '瓶' },
-  
-  // 消化系统药类
-  { id: 26, name: '胃复安片', type: '消化系统药', stock: 130, unit: '盒' },
-  { id: 27, name: '多潘立酮片', type: '消化系统药', stock: 110, unit: '盒' },
-  { id: 28, name: '蒙脱石散', type: '消化系统药', stock: 180, unit: '盒' },
-  { id: 29, name: '乳果糖口服液', type: '消化系统药', stock: 95, unit: '瓶' },
-  { id: 30, name: '西咪替丁片', type: '消化系统药', stock: 140, unit: '盒' },
-  
-  // 皮肤病药类
-  { id: 31, name: '酮康唑乳膏', type: '皮肤病药', stock: 100, unit: '支' },
-  { id: 32, name: '氯霉素软膏', type: '皮肤病药', stock: 150, unit: '支' },
-  { id: 33, name: '红霉素软膏', type: '皮肤病药', stock: 160, unit: '支' },
-  { id: 34, name: '硫磺软膏', type: '皮肤病药', stock: 200, unit: '支' },
-  { id: 35, name: '特比萘芬乳膏', type: '皮肤病药', stock: 80, unit: '支' },
-  
-  // 眼药水类
-  { id: 36, name: '氯霉素眼药水', type: '眼药水', stock: 120, unit: '支' },
-  { id: 37, name: '妥布霉素眼药水', type: '眼药水', stock: 90, unit: '支' },
-  { id: 38, name: '氧氟沙星眼药水', type: '眼药水', stock: 110, unit: '支' },
-  { id: 39, name: '利福平眼药水', type: '眼药水', stock: 75, unit: '支' },
-  { id: 40, name: '人工泪液', type: '眼药水', stock: 85, unit: '支' },
-  
-  // 耳药类
-  { id: 41, name: '耳康滴耳液', type: '耳药', stock: 95, unit: '瓶' },
-  { id: 42, name: '耳肤灵', type: '耳药', stock: 70, unit: '支' },
-  { id: 43, name: '硼酸冰片滴耳液', type: '耳药', stock: 130, unit: '瓶' },
-  { id: 44, name: '氧氟沙星滴耳液', type: '耳药', stock: 100, unit: '瓶' },
-  { id: 45, name: '氯霉素滴耳液', type: '耳药', stock: 140, unit: '瓶' },
-  
-  // 麻醉药类
-  { id: 46, name: '异氟烷', type: '麻醉药', stock: 20, unit: '瓶' },
-  { id: 47, name: '丙泊酚注射液', type: '麻醉药', stock: 30, unit: '支' },
-  { id: 48, name: '氯胺酮注射液', type: '麻醉药', stock: 25, unit: '支' },
-  { id: 49, name: '地西泮注射液', type: '麻醉药', stock: 35, unit: '支' },
-  { id: 50, name: '阿托品注射液', type: '麻醉药', stock: 40, unit: '支' }
-]
+// 加载药品选项
+const loadDrugOptions = async () => {
+  try {
+    const res = await getDrugInventory()
+    const drugs = res.data || []
+    // 将数据库的药品数据转换为组件需要的格式
+    drugOptions.value = drugs
+      .filter(drug => drug.isActive)
+      .map(drug => ({
+        id: drug.id,
+        name: drug.name,
+        type: drug.type,
+        price: drug.price,
+        stock: drug.stock,
+        unit: drug.unit || '盒'
+      }))
+    console.log('药品选项已加载:', drugOptions.value)
+  } catch (error) {
+    console.error('加载药品选项失败:', error)
+    // 加载失败时使用空数组
+    drugOptions.value = []
+  }
+}
 
 // ========== 方法 ==========
 const handleSelect = (key) => {
@@ -179,6 +132,7 @@ const handleRefreshList = () => {
 onMounted(() => {
   // 可以在这里添加初始化逻辑
   fetchUserInfo()
+  loadDrugOptions()
 })
 
 // 退出登录
@@ -245,17 +199,20 @@ const loadWaitingList = async (department) => {
     waitingList.value = filteredAppointments
       .map(app => ({
         id: app.id,
+        petId: app.petId,
         no: `A${String(app.id).padStart(3, '0')}`,
         name: app.petName || `宠物 ${app.petId}`,
         breed: app.petBreed || '',
         age: 0,
         weight: 0,
         owner: app.userName || `用户 ${app.userId}`,
+        ownerId: app.userId,
         reason: app.reason || '',
-        type: app.emergencyLevel === 'emergency' ? '急诊' : '普通',
+        type: '普通',
         department: app.department || '',
         doctorId: app.doctorId,
         doctorName: app.doctorName,
+        doctorTitle: app.doctorTitle,
         status: app.status
       }))
     console.log('候诊列表:', waitingList.value)

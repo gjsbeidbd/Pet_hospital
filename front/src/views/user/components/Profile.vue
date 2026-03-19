@@ -18,15 +18,6 @@
             <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
           </el-upload>
         </el-form-item>
-        <el-form-item label="账号">
-          <el-input v-model="profileForm.username" disabled>
-            <template #append>
-              <el-tooltip content="邮箱或手机号就是您的登录账号" placement="top">
-                <i class="el-icon-question"></i>
-              </el-tooltip>
-            </template>
-          </el-input>
-        </el-form-item>
         <el-form-item label="真实姓名">
           <el-input v-model="profileForm.name"></el-input>
         </el-form-item>

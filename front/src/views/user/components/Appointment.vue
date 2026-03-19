@@ -8,45 +8,45 @@
         </div>
       </template>
 
-      <el-table :data="paginatedAppointments" stripe style="width: 100%" v-loading="loading">
-        <el-table-column prop="appointmentDate" label="预约日期" width="120">
+      <el-table :data="paginatedAppointments" border style="width: 100%" v-loading="loading">
+        <el-table-column prop="appointmentDate" label="预约日期" min-width="110">
           <template #default="scope">
             {{ scope.row.appointmentDate }}
           </template>
         </el-table-column>
-        <el-table-column prop="appointmentTime" label="预约时间" width="100">
+        <el-table-column prop="appointmentTime" label="预约时间" min-width="90">
           <template #default="scope">
             {{ scope.row.appointmentTime }}
           </template>
         </el-table-column>
-        <el-table-column prop="petName" label="就诊宠物" width="120"></el-table-column>
-        <el-table-column prop="petSpecies" label="种类" width="80"></el-table-column>
-        <el-table-column prop="petBreed" label="品种" width="100"></el-table-column>
-        <el-table-column prop="doctorName" label="预约医生" width="120"></el-table-column>
-        <el-table-column prop="department" label="科室" width="100"></el-table-column>
-        <el-table-column prop="reason" label="病情描述"></el-table-column>
-        <el-table-column prop="status" label="当前状态" width="120">
+        <el-table-column prop="petName" label="就诊宠物" min-width="100"></el-table-column>
+        <el-table-column prop="petSpecies" label="种类" min-width="70"></el-table-column>
+        <el-table-column prop="petBreed" label="品种" min-width="90"></el-table-column>
+        <el-table-column prop="doctorName" label="预约医生" min-width="100"></el-table-column>
+        <el-table-column prop="department" label="科室" min-width="90"></el-table-column>
+        <el-table-column prop="reason" label="病情描述" min-width="150" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="status" label="当前状态" min-width="100">
           <template #default="scope">
             <el-tag v-if="scope.row.status === 'pending'" type="info">待取号</el-tag>
             <el-tag v-else-if="scope.row.status === 'waiting'" type="warning">待就诊</el-tag>
             <el-tag v-else-if="scope.row.status === 'in_progress'" type="primary">正在就诊</el-tag>
+            <el-tag v-else-if="scope.row.status === 'pending_payment'" type="danger">待缴费</el-tag>
             <el-tag v-else-if="scope.row.status === 'completed'" type="success">已完成</el-tag>
             <el-tag v-else-if="scope.row.status === 'cancelled'" type="danger">已取消</el-tag>
             <el-tag v-else type="info">未知状态</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120">
+        <el-table-column label="操作" width="100" fixed="right" align="center">
           <template #default="scope">
             <el-button 
               v-if="scope.row.status === 'pending' || scope.row.status === 'confirmed'" 
               type="danger" 
-              link 
               size="small"
               @click="handleCancelAppointment(scope.row.id)"
             >
-              取消预约
+              取消
             </el-button>
-            <el-button v-else type="primary" link size="small" disabled>查看详情</el-button>
+            <el-button v-else type="primary" size="small" @click="viewAppointmentDetail(scope.row)">详情</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -148,6 +148,32 @@
       <el-button type="primary" @click="submitBooking" :loading="submitting">确认预约</el-button>
     </template>
   </el-dialog>
+
+  <!-- 预约详情弹窗 -->
+  <el-dialog v-model="detailDialogVisible" title="预约详情" width="500px">
+    <el-descriptions :column="1" border v-if="selectedAppointment" label-class-name="detail-label">
+      <el-descriptions-item label="预约日期">{{ selectedAppointment.appointmentDate }}</el-descriptions-item>
+      <el-descriptions-item label="预约时间">{{ selectedAppointment.appointmentTime }}</el-descriptions-item>
+      <el-descriptions-item label="就诊宠物">{{ selectedAppointment.petName }}</el-descriptions-item>
+      <el-descriptions-item label="宠物种类">{{ selectedAppointment.petSpecies }}</el-descriptions-item>
+      <el-descriptions-item label="宠物品种">{{ selectedAppointment.petBreed }}</el-descriptions-item>
+      <el-descriptions-item label="预约医生">{{ selectedAppointment.doctorName }}</el-descriptions-item>
+      <el-descriptions-item label="预约科室">{{ selectedAppointment.department }}</el-descriptions-item>
+      <el-descriptions-item label="当前状态">
+        <el-tag v-if="selectedAppointment.status === 'pending'" type="info">待取号</el-tag>
+        <el-tag v-else-if="selectedAppointment.status === 'waiting'" type="warning">待就诊</el-tag>
+        <el-tag v-else-if="selectedAppointment.status === 'in_progress'" type="primary">正在就诊</el-tag>
+        <el-tag v-else-if="selectedAppointment.status === 'pending_payment'" type="danger">待缴费</el-tag>
+        <el-tag v-else-if="selectedAppointment.status === 'completed'" type="success">已完成</el-tag>
+        <el-tag v-else-if="selectedAppointment.status === 'cancelled'" type="danger">已取消</el-tag>
+        <el-tag v-else type="info">未知状态</el-tag>
+      </el-descriptions-item>
+      <el-descriptions-item label="病情描述">{{ selectedAppointment.reason || '无' }}</el-descriptions-item>
+    </el-descriptions>
+    <template #footer>
+      <el-button type="primary" @click="detailDialogVisible = false">关闭</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -183,6 +209,8 @@ const onDutyDoctorIds = ref([]) // 存储值班的医生 ID
 
 // 弹窗控制
 const bookingDialogVisible = ref(false)
+const detailDialogVisible = ref(false)
+const selectedAppointment = ref(null)
 
 // 预约表单数据
 const bookingForm = ref({
@@ -324,12 +352,18 @@ const submitBooking = async () => {
     submitting.value = true
     const userId = localStorage.getItem('userId')
     
+    const now = new Date()
+    const hours = String(now.getHours()).padStart(2, '0')
+    const minutes = String(now.getMinutes()).padStart(2, '0')
+    const seconds = String(now.getSeconds()).padStart(2, '0')
+    const currentTime = `${hours}:${minutes}:${seconds}`
+    
     const appointmentData = {
       userId: Number(userId),
       petId: bookingForm.value.petId,
       doctorId: bookingForm.value.doctorId,
       appointmentDate: bookingForm.value.appointmentDate,
-      appointmentTime: '09:00:00',
+      appointmentTime: currentTime,
       reason: bookingForm.value.reason || '',
       department: bookingForm.value.department
     }
@@ -370,6 +404,24 @@ const handleCancelAppointment = async (appointmentId) => {
     console.error('取消预约失败:', error)
     ElMessage.error('取消预约失败，请重试')
   }
+}
+
+// 查看预约详情
+const viewAppointmentDetail = (appointment) => {
+  selectedAppointment.value = appointment
+  detailDialogVisible.value = true
+}
+
+// 获取状态文本
+const getStatusText = (status) => {
+  const statusMap = {
+    'pending': '待取号',
+    'waiting': '待就诊',
+    'in_progress': '正在就诊',
+    'completed': '已完成',
+    'cancelled': '已取消'
+  }
+  return statusMap[status] || '未知状态'
 }
 
 // 初始化
@@ -417,5 +469,19 @@ watch(() => props.pets, () => {
   display: flex;
   justify-content: center;
   padding: 20px 0;
+}
+
+.detail-label {
+  width: 100px;
+  text-align: right;
+}
+
+:deep(.detail-label) {
+  width: 100px;
+}
+
+:deep(.el-descriptions__label) {
+  width: 100px;
+  min-width: 100px;
 }
 </style>

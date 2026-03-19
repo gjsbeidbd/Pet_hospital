@@ -1,6 +1,7 @@
 package edu.mycc.xhd.pethospitalproject.service;
 
 import edu.mycc.xhd.pethospitalproject.entity.MedicalRecord;
+import edu.mycc.xhd.pethospitalproject.entity.MedicalRecordDetail;
 import edu.mycc.xhd.pethospitalproject.mapper.MedicalRecordMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -81,12 +82,38 @@ public class MedicalRecordService {
     }
 
     /**
-     * 根据ID和医生ID获取病历信息
-     * @param id 病历ID
-     * @param doctorId 医生ID
+     * 根据 ID 和医生 ID 获取病历信息
+     * @param id 病历 ID
+     * @param doctorId 医生 ID
      * @return 病历信息
      */
     public MedicalRecord getMedicalRecordByIdAndDoctorId(Long id, Long doctorId) {
         return medicalRecordMapper.selectByIdAndDoctorId(id, doctorId);
+    }
+    
+    /**
+     * 根据宠物 ID 获取病历详情（包含宠物、主人、医生信息）
+     * @param petId 宠物 ID
+     * @return 病历详情列表
+     */
+    public List<MedicalRecordDetail> getMedicalRecordDetailByPetId(Long petId) {
+        return medicalRecordMapper.selectDetailByPetId(petId);
+    }
+    
+    /**
+     * 获取所有病历详情
+     * @return 病历详情列表
+     */
+    public List<MedicalRecordDetail> getAllMedicalRecordDetail() {
+        return medicalRecordMapper.selectAllDetail();
+    }
+    
+    /**
+     * 根据科室获取病历详情
+     * @param department 科室
+     * @return 病历详情列表
+     */
+    public List<MedicalRecordDetail> getMedicalRecordDetailByDepartment(String department) {
+        return medicalRecordMapper.selectDetailByDepartment(department);
     }
 }

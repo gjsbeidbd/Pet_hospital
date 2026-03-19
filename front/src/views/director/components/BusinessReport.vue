@@ -6,7 +6,7 @@
           <div class="data-card">
             <div>
               <div class="label">今日营收</div>
-              <div class="num">¥ 12,580</div>
+              <div class="num">¥ {{ Number(todayRevenue).toLocaleString() }}</div>
             </div>
             <div class="icon-box" style="background: #409EFF;"><el-icon><Wallet /></el-icon></div>
           </div>
@@ -17,7 +17,7 @@
           <div class="data-card">
             <div>
               <div class="label">本月接诊量</div>
-              <div class="num">386 <span style="font-size: 12px; color: #67C23A;">(+12%)</span></div>
+              <div class="num">{{ monthCompleted }}</div>
             </div>
             <div class="icon-box" style="background: #67C23A;"><el-icon><FirstAidKit /></el-icon></div>
           </div>
@@ -27,8 +27,8 @@
         <el-card shadow="hover">
           <div class="data-card">
             <div>
-              <div class="label">会员总数</div>
-              <div class="num">1,205</div>
+              <div class="label">用户总数</div>
+              <div class="num">{{ totalUsers.toLocaleString() }}</div>
             </div>
             <div class="icon-box" style="background: #E6A23C;"><el-icon><User /></el-icon></div>
           </div>
@@ -39,7 +39,7 @@
           <div class="data-card">
             <div>
               <div class="label">库存预警</div>
-              <div class="num" style="color: #F56C6C;">3</div>
+              <div class="num" style="color: #F56C6C;">{{ drugWarning }}</div>
             </div>
             <div class="icon-box" style="background: #F56C6C;"><el-icon><Warning /></el-icon></div>
           </div>
@@ -54,7 +54,7 @@
         </el-card>
       </el-col>
       <el-col :span="8">
-        <el-card header="本月高发病种占比">
+        <el-card header="本月科室预约占比">
           <div id="chart-disease" style="height: 350px; width: 100%;"></div>
         </el-card>
       </el-col>
@@ -63,38 +63,124 @@
 </template>
 
 <script setup>
-import { onMounted, nextTick } from 'vue';
+import { onMounted, nextTick, ref } from 'vue';
 import { Wallet, FirstAidKit, User, Warning } from '@element-plus/icons-vue';
+import { getTodayRevenue, getMonthCompletedCount, getTotalUsersCount, getDrugWarningCount, getLastSevenDaysRevenue, getDepartmentCount } from '@/services/api';
+
+const todayRevenue = ref(0);
+const monthCompleted = ref(0);
+const totalUsers = ref(0);
+const drugWarning = ref(0);
+const sevenDaysData = ref([]);
+const departmentData = ref([]);
+
+const fetchTodayRevenue = async () => {
+  try {
+    const res = await getTodayRevenue()
+    console.log('今日营收响应:', res)
+    let amount = res.data
+    if (amount === null || amount === undefined) {
+      amount = 0
+    }
+    if (typeof amount === 'string') {
+      amount = parseFloat(amount)
+    }
+    todayRevenue.value = amount
+    console.log('今日营收值:', todayRevenue.value)
+  } catch (error) {
+    console.error('获取今日营收失败:', error)
+    todayRevenue.value = 0
+  }
+};
+
+const fetchMonthCompleted = async () => {
+  try {
+    const res = await getMonthCompletedCount()
+    monthCompleted.value = res.data?.data ?? res.data ?? 0
+  } catch (error) {
+    console.error('获取本月接诊量失败:', error)
+    monthCompleted.value = 0
+  }
+};
+
+const fetchTotalUsers = async () => {
+  try {
+    const res = await getTotalUsersCount()
+    totalUsers.value = res.data?.data ?? res.data ?? 0
+  } catch (error) {
+    console.error('获取用户总数失败:', error)
+    totalUsers.value = 0
+  }
+};
+
+const fetchDrugWarning = async () => {
+  try {
+    const res = await getDrugWarningCount()
+    drugWarning.value = res.data?.data ?? res.data ?? 0
+  } catch (error) {
+    console.error('获取库存预警失败:', error)
+    drugWarning.value = 0
+  }
+};
+
+const fetchSevenDaysRevenue = async () => {
+  try {
+    const res = await getLastSevenDaysRevenue()
+    sevenDaysData.value = res.data || []
+  } catch (error) {
+    console.error('获取近七天营收失败:', error)
+    sevenDaysData.value = []
+  }
+};
+
+const fetchDepartmentCount = async () => {
+  try {
+    const res = await getDepartmentCount()
+    departmentData.value = res.data || []
+  } catch (error) {
+    console.error('获取科室预约数失败:', error)
+    departmentData.value = []
+  }
+};
 
 // 图表初始化
 const initCharts = async () => {
   const echarts = await import('echarts');
-  
+
+  const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+  const xAxisData = sevenDaysData.value.map(item => {
+    const d = new Date(item.date);
+    return weekDays[d.getDay()];
+  });
+
+  const seriesData = sevenDaysData.value.map(item => parseFloat(item.total) || 0);
+
   const chartRevenue = echarts.init(document.getElementById('chart-revenue'));
   chartRevenue.setOption({
     tooltip: { trigger: 'axis' },
     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-    xAxis: { type: 'category', data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'] },
+    xAxis: { type: 'category', data: xAxisData },
     yAxis: { type: 'value' },
-    series: [{ name: '营收(元)', type: 'line', smooth: true, data: [12000, 13200, 10100, 13400, 9000, 23000, 21000], color: '#409EFF', areaStyle: {} }]
+    series: [{ name: '营收(元)', type: 'line', smooth: true, data: seriesData, color: '#409EFF', areaStyle: {} }]
   });
 
   const chartDisease = echarts.init(document.getElementById('chart-disease'));
+  const departmentChartData = departmentData.value.map(item => ({
+    value: item.count,
+    name: item.department || '未知'
+  }));
   chartDisease.setOption({
     tooltip: { trigger: 'item' },
     legend: { bottom: '0%' },
     series: [{
-      name: '病种分布',
+      name: '科室预约',
       type: 'pie',
       radius: ['40%', '70%'],
       avoidLabelOverlap: false,
       itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
-      data: [
-        { value: 1048, name: '皮肤病' },
-        { value: 735, name: '消化系统' },
-        { value: 580, name: '疫苗接种' },
-        { value: 484, name: '外伤' },
-        { value: 300, name: '其他' }
+      data: departmentChartData.length > 0 ? departmentChartData : [
+        { value: 0, name: '暂无数据' }
       ]
     }]
   });
@@ -105,7 +191,13 @@ const initCharts = async () => {
   });
 };
 
-onMounted(() => {
+onMounted(async () => {
+  await fetchTodayRevenue();
+  await fetchMonthCompleted();
+  await fetchTotalUsers();
+  await fetchDrugWarning();
+  await fetchSevenDaysRevenue();
+  await fetchDepartmentCount();
   nextTick(() => initCharts());
 });
 </script>

@@ -35,6 +35,9 @@ public interface DoctorScheduleMapper extends BaseMapper<DoctorSchedule> {
         @Param("doctorId") Long doctorId,
         @Param("startDate") String startDate,
         @Param("endDate") String endDate);
+
+    @Select("SELECT * FROM doctor_schedules WHERE department = #{department} AND schedule_date = #{scheduleDate} AND shift_type = #{shiftType} LIMIT 1")
+    DoctorSchedule findByDepartmentAndDateAndShift(@Param("department") String department, @Param("scheduleDate") String scheduleDate, @Param("shiftType") String shiftType);
     
     /**
      * 根据日期和科室查询排班

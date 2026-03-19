@@ -52,13 +52,13 @@ CREATE TABLE users (
 -- 宠物表
 CREATE TABLE pets (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL COMMENT '用户ID',
+    user_id BIGINT NOT NULL COMMENT '用户 ID',
     name VARCHAR(100) NOT NULL COMMENT '宠物名',
     species VARCHAR(50) NOT NULL COMMENT '种类',
     breed VARCHAR(100) COMMENT '品种',
     age INT COMMENT '年龄',
-    gender ENUM('male', 'female') NOT NULL COMMENT '性别',
-    weight DECIMAL(5,2) COMMENT '重量(kg)',
+    gender ENUM('雄性', '雌性') NOT NULL COMMENT '性别',
+    weight DECIMAL(5,2) COMMENT '重量 (kg)',
     medical_history TEXT COMMENT '病史',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -186,7 +186,7 @@ CREATE TABLE appointments (
     doctor_id BIGINT COMMENT '医生ID',
     appointment_date DATE NOT NULL COMMENT '预约日期',
     appointment_time TIME NOT NULL COMMENT '预约时间',
-    status ENUM('pending', 'waiting', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending' COMMENT '状态',
+    status ENUM('pending', 'waiting', 'in_progress', 'pending_payment', 'completed', 'cancelled') DEFAULT 'pending' COMMENT '状态',
     reason TEXT COMMENT '预约原因',
     notes TEXT COMMENT '备注',
     department VARCHAR(50) COMMENT '科室',
@@ -332,6 +332,21 @@ CREATE TABLE billing (
     FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL
 ) COMMENT='账单表';
 
+-- 账单明细表
+CREATE TABLE billing_items (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    billing_id BIGINT NOT NULL COMMENT '账单ID',
+    item_name VARCHAR(200) NOT NULL COMMENT '费用项目名称',
+    category ENUM('挂号费', '检查费', '手术费', '药品费', '治疗费', '护理费', '其他') NOT NULL COMMENT '费用类别',
+    quantity INT NOT NULL DEFAULT 1 COMMENT '数量',
+    unit_price DECIMAL(10,2) NOT NULL COMMENT '单价',
+    total_price DECIMAL(10,2) NOT NULL COMMENT '小计金额',
+    unit VARCHAR(50) COMMENT '单位',
+    description TEXT COMMENT '备注说明',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    FOREIGN KEY (billing_id) REFERENCES billing(id) ON DELETE CASCADE
+) COMMENT='账单明细表';
+
 -- 医院设置表
 CREATE TABLE hospital_settings (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -428,9 +443,9 @@ INSERT INTO users (username, password, name, phone, email, address, role) VALUES
 
 -- 插入用户宠物信息
 INSERT INTO pets (user_id, name, species, breed, age, gender, weight, medical_history) VALUES
-(1, '旺财', '狗', '金毛', 3, 'male', 30.5, '无过敏史'),
-(1, '咪咪', '猫', '英短', 2, 'female', 4.2, '定期驱虫'),
-(2, '小黑', '狗', '拉布拉多', 5, 'male', 35.0, '有关节炎');
+(1, '旺财', '狗', '金毛', 3, '雄性', 30.5, '无过敏史'),
+(1, '咪咪', '猫', '英短', 2, '雌性', 4.2, '定期驱虫'),
+(2, '小黑', '狗', '拉布拉多', 5, '雄性', 35.0, '有关节炎');
 
 -- 插入前台信息（护士）
 -- 每个科室 2 名护士

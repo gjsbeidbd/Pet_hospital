@@ -25,4 +25,8 @@ public class ReceptionistScheduleService extends ServiceImpl<ReceptionistSchedul
     public List<ReceptionistSchedule> getSchedulesByReceptionistIdAndDateRange(Long receptionistId, String startDate, String endDate) {
         return receptionistScheduleMapper.findByReceptionistIdAndDateRange(receptionistId, startDate, endDate);
     }
+
+    public ReceptionistSchedule findByDepartmentAndDateAndShift(String department, String scheduleDate, String shiftType) {
+        return receptionistScheduleMapper.findByDepartmentAndDateAndShift(department, scheduleDate, shiftType);
+    }
 }

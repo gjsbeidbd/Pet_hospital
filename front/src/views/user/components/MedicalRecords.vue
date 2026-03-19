@@ -20,48 +20,52 @@
       <!-- 病历列表 -->
       <div class="records-list">
         <el-table :data="filteredRecords" border style="width: 100%" class="data-table" empty-text="暂无病历记录">
-          <el-table-column prop="petName" label="宠物名称" width="120" align="center">
+          <el-table-column label="报告编号" min-width="100" align="center">
             <template #default="scope">
-              <span style="font-weight: bold;">{{ scope.row.petName || scope.row.title }}</span>
+              <span>MR-{{ scope.row.id }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="visitDate" label="就诊日期" width="120" align="center">
+          <el-table-column prop="petName" label="宠物名称" min-width="100" align="center">
             <template #default="scope">
-              <span style="color: #409EFF;">{{ formatDate(scope.row.visitDate) }}</span>
+              <span>{{ scope.row.petName || scope.row.title }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="doctorName" label="主治医生" width="120" align="center">
+          <el-table-column prop="visitDate" label="就诊日期" min-width="110" align="center">
             <template #default="scope">
-              {{ scope.row.doctorName || scope.row.doctor || '未知医生' }}
+              <span>{{ formatDate(scope.row.visitDate) }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="diagnosis" label="诊断结果" min-width="200" show-overflow-tooltip>
+          <el-table-column prop="doctorName" label="主治医生" min-width="100" align="center">
             <template #default="scope">
-              <span v-if="scope.row.diagnosis" style="color: #F56C6C;">{{ scope.row.diagnosis }}</span>
-              <span v-else style="color: #999;">无诊断信息</span>
+              <span>{{ scope.row.doctorName || scope.row.doctor || '未知医生' }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="examination" label="检查项目" width="120" align="center">
+          <el-table-column prop="department" label="科室" min-width="100" align="center">
             <template #default="scope">
-              <el-tag v-if="scope.row.examination" type="info" size="small">{{ scope.row.examination }}</el-tag>
-              <span v-else style="color: #999;">无</span>
+              <span>{{ scope.row.department || '未知科室' }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="surgery" label="手术项目" width="120" align="center">
+          <el-table-column prop="diagnosis" label="诊断结果" min-width="150">
             <template #default="scope">
-              <el-tag v-if="scope.row.surgery" type="warning" size="small">{{ scope.row.surgery }}</el-tag>
-              <span v-else style="color: #999;">无</span>
+              <span>{{ scope.row.diagnosis || '无诊断信息' }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="prescriptionCount" label="处方药品" width="100" align="center">
+          <el-table-column prop="examination" label="检查项目" min-width="100" align="center">
             <template #default="scope">
-              <el-tag v-if="scope.row.prescriptionCount > 0" type="success" size="small">
-                {{ scope.row.prescriptionCount }}种
-              </el-tag>
-              <span v-else style="color: #999;">无</span>
+              <span>{{ scope.row.examination || '无' }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="120" fixed="right" align="center">
+          <el-table-column prop="surgery" label="手术项目" min-width="100" align="center">
+            <template #default="scope">
+              <span>{{ scope.row.surgery || '无' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="prescriptionCount" label="处方药品" min-width="90" align="center">
+            <template #default="scope">
+              <span>{{ scope.row.prescriptionCount > 0 ? scope.row.prescriptionCount + '种' : '无' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="100" fixed="right" align="center">
             <template #default="scope">
               <el-button type="primary" size="small" @click="viewDetail(scope.row)">查看详情</el-button>
             </template>
@@ -85,190 +89,160 @@
     </el-card>
     
     <!-- 病历详情弹窗 -->
-    <el-dialog v-model="detailDialogVisible" title="病历详情" width="80%" top="5vh">
+    <el-dialog v-model="detailDialogVisible" title="病历详情" width="60%" top="5vh">
       <div v-if="selectedRecord" class="medical-record-detail">
-        <!-- 病历头部信息 -->
-        <div class="record-header">
-          <h2 style="text-align: center; margin-bottom: 20px;">宠物医院病历单</h2>
-          <el-row :gutter="20">
-            <el-col :span="8">
-              <div class="info-item">
-                <span class="label">病历号：</span>
-                <span class="value">{{ selectedRecord.id || '未知' }}</span>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="info-item">
-                <span class="label">就诊日期：</span>
-                <span class="value">{{ formatDate(selectedRecord.visitDate) }}</span>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="info-item">
-                <span class="label">状态：</span>
-                <span class="value">
-                  <el-tag :type="getStatusType(selectedRecord.status)">{{ selectedRecord.status || '未知状态' }}</el-tag>
-                </span>
-              </div>
-            </el-col>
-          </el-row>
+        <!-- 报告头部 -->
+        <div class="report-header">
+          <h1 class="hospital-name">宠物医院信息管理系统病历报告</h1>
+          <div class="report-meta">
+            <div class="meta-item">
+              <span class="meta-label">报告编号：</span>
+              <span class="meta-value">MR-{{ selectedRecord.id || '000000' }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">就诊日期：</span>
+              <span class="meta-value">{{ formatDate(selectedRecord.visitDate) }}</span>
+            </div>
+          </div>
         </div>
         
-        <!-- 宠物信息 -->
-        <el-card shadow="never" style="margin-bottom: 20px;">
-          <template #header>
-            <strong>宠物信息</strong>
-          </template>
-          <el-row :gutter="20">
-            <el-col :span="8">
-              <div class="info-item">
-                <span class="label">宠物名称：</span>
-                <span class="value">{{ selectedRecord.petName || '未知' }}</span>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="info-item">
-                <span class="label">宠物品种：</span>
-                <span class="value">{{ selectedRecord.petBreed || '未知' }}</span>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="info-item">
-                <span class="label">宠物年龄：</span>
-                <span class="value">{{ selectedRecord.petAge || '未知' }}岁</span>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="info-item">
-                <span class="label">宠物性别：</span>
-                <span class="value">{{ selectedRecord.petGender || '未知' }}</span>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="info-item">
-                <span class="label">主人姓名：</span>
-                <span class="value">{{ selectedRecord.ownerName || '未知' }}</span>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="info-item">
-                <span class="label">联系电话：</span>
-                <span class="value">{{ selectedRecord.ownerPhone || '未知' }}</span>
-              </div>
-            </el-col>
-          </el-row>
-        </el-card>
+        <!-- 预约信息 -->
+        <div class="section-block">
+          <div class="section-title">预约信息</div>
+          <div class="info-grid-3">
+            <div class="info-item">
+              <span class="label">宠物名称：</span>
+              <span class="value">{{ selectedRecord.petName || '未知' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">宠物品种：</span>
+              <span class="value">{{ selectedRecord.petBreed || '未知' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">宠物年龄：</span>
+              <span class="value">{{ selectedRecord.petAge || '未知' }}岁</span>
+            </div>
+            <div class="info-item">
+              <span class="label">宠物性别：</span>
+              <span class="value">{{ selectedRecord.petGender || '未知' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">主人姓名：</span>
+              <span class="value">{{ selectedRecord.ownerName || '未知' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">联系电话：</span>
+              <span class="value">{{ selectedRecord.ownerPhone || '未知' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">主治医生：</span>
+              <span class="value">{{ selectedRecord.doctorName || selectedRecord.doctor || '未知医生' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">就诊科室：</span>
+              <span class="value">{{ selectedRecord.department || '未知科室' }}</span>
+            </div>
+          </div>
+        </div>
         
-        <!-- 诊断信息 -->
-        <el-card shadow="never" style="margin-bottom: 20px;">
-          <template #header>
-            <strong>诊断信息</strong>
-          </template>
-          <el-row :gutter="20">
-            <el-col :span="8">
-              <div class="info-item">
-                <span class="label">主治医生：</span>
-                <span class="value">{{ selectedRecord.doctorName || selectedRecord.doctor || '未知医生' }}</span>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="info-item">
-                <span class="label">科室：</span>
-                <span class="value">{{ selectedRecord.department || '未知科室' }}</span>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="info-item">
-                <span class="label">就诊类型：</span>
-                <span class="value">{{ selectedRecord.visitType || '普通门诊' }}</span>
-              </div>
-            </el-col>
-            <el-col :span="24">
-              <div class="info-item">
-                <span class="label">主诉：</span>
-                <span class="value">{{ selectedRecord.chiefComplaint || selectedRecord.reason || '无主诉信息' }}</span>
-              </div>
-            </el-col>
-            <el-col :span="24">
-              <div class="info-item">
-                <span class="label">临床症状：</span>
-                <span class="value">{{ selectedRecord.symptoms || '无症状描述' }}</span>
-              </div>
-            </el-col>
-            <el-col :span="24">
-              <div class="info-item">
-                <span class="label">诊断结果：</span>
-                <span class="value">{{ selectedRecord.diagnosis || '无诊断结果' }}</span>
-              </div>
-            </el-col>
-            <el-col :span="24" v-if="selectedRecord.examinations && selectedRecord.examinations.length > 0">
-              <div class="info-item">
-                <span class="label">检查项目：</span>
-                <span class="value">{{ selectedRecord.examinations.join(', ') }}</span>
-              </div>
-            </el-col>
-          </el-row>
-        </el-card>
+        <!-- 主诉与症状 -->
+        <div class="section-block">
+          <div class="section-title">主诉与症状</div>
+          <div class="info-list">
+            <div class="info-item-full">
+              <span class="label">主诉：</span>
+              <span class="value">{{ selectedRecord.chiefComplaint || selectedRecord.reason || '无主诉信息' }}</span>
+            </div>
+            <div class="info-item-full">
+              <span class="label">临床症状：</span>
+              <span class="value">{{ selectedRecord.symptoms || selectedRecord.treatment || '无症状描述' }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 检查项目 -->
+        <div class="section-block" v-if="selectedRecord.examination">
+          <div class="section-title">检查项目</div>
+          <div class="info-list">
+            <div class="info-item-full">
+              <span class="label">检查项目：</span>
+              <span class="value">{{ selectedRecord.examination }}</span>
+            </div>
+            <div class="info-item-full" v-if="selectedRecord.examinationResult">
+              <span class="label">检查结果：</span>
+              <span class="value result-text">{{ selectedRecord.examinationResult }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 手术项目 -->
+        <div class="section-block" v-if="selectedRecord.surgery">
+          <div class="section-title">手术项目</div>
+          <div class="info-list">
+            <div class="info-item-full">
+              <span class="label">手术项目：</span>
+              <span class="value">{{ selectedRecord.surgery }}</span>
+            </div>
+            <div class="info-item-full" v-if="selectedRecord.surgeryResult">
+              <span class="label">手术结果：</span>
+              <span class="value result-text">{{ selectedRecord.surgeryResult }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 诊断结果 -->
+        <div class="section-block">
+          <div class="section-title">诊断结果</div>
+          <div class="diagnosis-content">{{ selectedRecord.diagnosis || '暂无诊断结果' }}</div>
+        </div>
         
         <!-- 处方信息 -->
-        <el-card shadow="never" style="margin-bottom: 20px;" v-if="selectedRecord.prescriptions && selectedRecord.prescriptions.length > 0">
-          <template #header>
-            <strong>处方信息</strong>
-          </template>
-          <el-table :data="selectedRecord.prescriptions" border style="width: 100%">
-            <el-table-column prop="name" label="药品名称" width="150"></el-table-column>
-            <el-table-column prop="count" label="数量" width="80"></el-table-column>
-            <el-table-column prop="usage" label="用法用量"></el-table-column>
-          </el-table>
-        </el-card>
+        <div class="section-block" v-if="selectedRecord.prescription && parsePrescriptionDrugs(selectedRecord.prescription).length > 0">
+          <div class="section-title">处方信息</div>
+          <div class="prescription-list">
+            <div v-for="(drug, index) in parsePrescriptionDrugs(selectedRecord.prescription)" :key="index" class="drug-item">
+              <div class="drug-line">
+                <span class="drug-name">{{ drug.name }}</span>
+                <span class="drug-type">（{{ drug.type || '其他' }}）</span>
+                <span class="drug-count">{{ drug.count }} {{ drug.unit || '' }}</span>
+              </div>
+              <div class="drug-usage">用法用量：{{ drug.usage || '遵医嘱' }}</div>
+            </div>
+          </div>
+        </div>
         
         <!-- 医嘱建议 -->
-        <el-card shadow="never" style="margin-bottom: 20px;" v-if="selectedRecord.advices && selectedRecord.advices.length > 0">
-          <template #header>
-            <strong>医嘱建议</strong>
-          </template>
-          <div class="info-item">
-            <span class="value">{{ selectedRecord.advices.join(', ') }}</span>
-          </div>
-        </el-card>
+        <div class="section-block" v-if="selectedRecord.advicesText">
+          <div class="section-title">医嘱建议</div>
+          <div class="advices-content">{{ selectedRecord.advicesText }}</div>
+        </div>
         
-        <!-- 费用信息 -->
-        <el-card shadow="never" style="margin-bottom: 20px;">
-          <template #header>
-            <strong>费用明细</strong>
-          </template>
-          <el-row :gutter="20">
-            <el-col :span="6">
-              <div class="info-item">
-                <span class="label">检查费：</span>
-                <span class="value">¥{{ selectedRecord.examFee || 0 }}</span>
-              </div>
-            </el-col>
-            <el-col :span="6">
-              <div class="info-item">
-                <span class="label">药费：</span>
-                <span class="value">¥{{ selectedRecord.medicineFee || 0 }}</span>
-              </div>
-            </el-col>
-            <el-col :span="6">
-              <div class="info-item">
-                <span class="label">治疗费：</span>
-                <span class="value">¥{{ selectedRecord.treatmentFee || 0 }}</span>
-              </div>
-            </el-col>
-            <el-col :span="6">
-              <div class="info-item">
-                <span class="label">总费用：</span>
-                <span class="value">¥{{ selectedRecord.totalFee || (selectedRecord.examFee + selectedRecord.medicineFee + selectedRecord.treatmentFee) || 0 }}</span>
-              </div>
-            </el-col>
-          </el-row>
-        </el-card>
+        <!-- 备注信息 -->
+        <div class="section-block" v-if="selectedRecord.notes">
+          <div class="section-title">备注信息</div>
+          <div class="notes-content">{{ selectedRecord.notes }}</div>
+        </div>
+        
+        <!-- 报告底部 -->
+        <div class="report-footer">
+          <div class="footer-left">
+            <div class="signature-item">
+              <span class="signature-label">主治医生签名：</span>
+              <span class="signature-value">{{ selectedRecord.doctorName || selectedRecord.doctor || '________' }}</span>
+            </div>
+          </div>
+          <div class="footer-right">
+            <div class="date-item">
+              <span class="date-label">报告日期：</span>
+              <span class="date-value">{{ formatDate(selectedRecord.visitDate) }}</span>
+            </div>
+          </div>
+        </div>
       </div>
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="detailDialogVisible = false">关闭</el-button>
-          <el-button type="primary" @click="printRecord">打印病历</el-button>
+          <el-button type="primary" @click="printRecord">打印报告</el-button>
         </span>
       </template>
     </el-dialog>
@@ -279,7 +253,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
-import { getMedicalRecordsByPetId } from '@/services/api'
 
 // 控制展开的面板
 const activeNames = ref([])
@@ -371,10 +344,22 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('zh-CN')
 }
 
+// 解析处方药品数据
+const parsePrescriptionDrugs = (prescription) => {
+  try {
+    if (!prescription) return []
+    const data = JSON.parse(prescription)
+    return data.drugs || []
+  } catch (error) {
+    console.error('解析处方数据失败:', error)
+    return []
+  }
+}
+
 // 获取病历数据
 const fetchMedicalRecords = async () => {
   try {
-    // 获取用户ID
+    // 获取用户 ID
     const userId = localStorage.getItem('userId')
     if (!userId) {
       ElMessage.error('用户未登录')
@@ -385,29 +370,83 @@ const fetchMedicalRecords = async () => {
     const petResponse = await fetch(`http://localhost:8080/api/pets?userId=${userId}`)
     const pets = await petResponse.json()
     
-    // 获取每个宠物的病历
-      const allRecords = []
-      for (const pet of pets) {
-        const response = await getMedicalRecordsByPetId(pet.id)
-        const records = response.data.map(record => ({
+    console.log('获取到的宠物列表:', pets)
+    
+    if (!pets || pets.length === 0) {
+      ElMessage.info('您还没有添加宠物')
+      medicalRecords.value = []
+      return
+    }
+    
+    // 获取每个宠物的病历详情（使用新的联合查询接口）
+    const allRecords = []
+    for (const pet of pets) {
+      try {
+        // 调用新的 detail 接口
+        const response = await fetch(`http://localhost:8080/api/medical-records/detail?petId=${pet.id}`)
+        
+        if (!response.ok) {
+          console.error(`获取宠物 ${pet.name} 的病历失败，状态码:`, response.status)
+          // 如果 detail 接口失败，尝试使用原来的接口
+          const oldResponse = await fetch(`http://localhost:8080/api/medical-records?petId=${pet.id}`)
+          if (oldResponse.ok) {
+            const records = await oldResponse.json()
+            const petRecords = records.map(record => ({
+              ...record,
+              petName: pet.name,
+              petBreed: pet.breed,
+              petAge: pet.age,
+              petGender: pet.gender,
+              ownerName: localStorage.getItem('userName') || '未知',
+              title: `${formatDate(record.visitDate)} | ${pet.name} | ${record.diagnosis || '无诊断'}`,
+              examination: record.examination || '',
+              surgery: record.surgery || '',
+              prescriptionCount: record.prescription ? (JSON.parse(record.prescription).drugs?.length || 0) : 0,
+              chiefComplaint: '暂无主诉',
+              symptoms: record.treatment || '无症状描述',
+              diagnosis: record.diagnosis || '无诊断结果',
+              examinationResult: record.examinationResult || '',
+              surgeryResult: record.surgeryResult || '',
+              advicesText: record.prescription ? (JSON.parse(record.prescription).advices || '') : ''
+            }))
+            allRecords.push(...petRecords)
+          }
+          continue
+        }
+        
+        const records = await response.json()
+        
+        // 确保 records 是数组
+        if (!Array.isArray(records)) {
+          console.error('返回的数据不是数组:', records)
+          continue
+        }
+        
+        const petRecords = records.map(record => ({
           ...record,
-          petName: pet.name,
-          petBreed: pet.breed,
-          petAge: pet.age,
-          petGender: pet.gender,
-          title: `${formatDate(record.visitDate)} | ${pet.name} | ${record.diagnosis || '无诊断'}`,
-          // 添加新字段
+          title: `${formatDate(record.visitDate)} | ${record.petName} | ${record.diagnosis || '无诊断'}`,
+          // 添加表格显示字段
           examination: record.examination || '',
           surgery: record.surgery || '',
-          prescriptionCount: record.prescription ? (JSON.parse(record.prescription).drugs?.length || 0) : 0
+          prescriptionCount: record.prescription ? (JSON.parse(record.prescription).drugs?.length || 0) : 0,
+          // 映射字段到前端显示（后端已经返回，直接使用）
+          chiefComplaint: '暂无主诉', // 主诉在预约表中，需要额外关联
+          symptoms: record.treatment || '无症状描述',
+          diagnosis: record.diagnosis || '无诊断结果',
+          examinationResult: record.examinationResult || '',
+          surgeryResult: record.surgeryResult || '',
+          advicesText: record.prescription ? (JSON.parse(record.prescription).advices || '') : ''
         }))
-        allRecords.push(...records)
+        allRecords.push(...petRecords)
+      } catch (error) {
+        console.error(`获取宠物 ${pet.name} 的病历失败:`, error)
       }
+    }
     
     medicalRecords.value = allRecords
   } catch (error) {
     console.error('获取病历数据失败:', error)
-    ElMessage.error('获取病历数据失败: ' + (error.response?.data?.error || error.message || '未知错误'))
+    ElMessage.error('获取病历数据失败：' + (error.response?.data?.error || error.message || '未知错误'))
   }
 }
 
@@ -451,29 +490,252 @@ onMounted(() => {
 .medical-record-detail {
   max-height: 70vh;
   overflow-y: auto;
+  padding: 20px;
+  background: #fff;
 }
 
-.record-header {
-  margin-bottom: 20px;
+/* 报告头部样式 */
+.report-header {
+  text-align: center;
   padding-bottom: 20px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 3px double #303133;
+  margin-bottom: 25px;
 }
 
-.info-item {
-  margin-bottom: 10px;
-}
-
-.label {
-  display: inline-block;
-  width: 80px;
+.hospital-name {
+  font-size: 24px;
+  color: #303133;
+  margin-bottom: 15px;
   font-weight: bold;
 }
 
-.value {
-  display: inline-block;
+.report-meta {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 15px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meta-label {
+  font-size: 14px;
+  color: #909399;
+}
+
+.meta-value {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+}
+
+/* 区块样式 */
+.section-block {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #dcdfe6;
+}
+
+.section-block:last-of-type {
+  border-bottom: none;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #606266;
+}
+
+/* 信息网格布局 */
+.info-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.info-item .label {
+  font-size: 13px;
+  color: #909399;
+  font-weight: 500;
+}
+
+.info-item .value {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+}
+
+/* 信息列表样式 */
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item-full {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.info-item-full .label {
+  font-size: 13px;
+  color: #909399;
+  font-weight: 500;
+}
+
+.info-item-full .value {
+  font-size: 14px;
+  color: #303133;
+  line-height: 1.6;
+}
+
+.result-text {
+  color: #606266;
+  font-weight: 500;
+}
+
+/* 诊断框样式 */
+.diagnosis-content {
+  font-size: 15px;
+  color: #303133;
+  font-weight: 500;
+  line-height: 1.8;
+  padding: 10px 0;
+}
+
+/* 处方列表样式 */
+.prescription-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drug-item {
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #dcdfe6;
+}
+
+.drug-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.drug-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.drug-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.drug-type {
+  font-size: 13px;
+  color: #909399;
+}
+
+.drug-count {
+  font-size: 13px;
+  color: #606266;
+  margin-left: auto;
+}
+
+.drug-usage {
+  font-size: 13px;
+  color: #606266;
+  padding-left: 0;
+}
+
+/* 医嘱内容样式 */
+.advices-content {
+  font-size: 14px;
+  color: #606266;
+  line-height: 1.8;
+  padding: 10px 0;
+}
+
+/* 备注内容样式 */
+.notes-content {
+  font-size: 14px;
+  color: #606266;
+  line-height: 1.6;
+  padding: 10px 0;
+}
+
+/* 报告底部样式 */
+.report-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20px;
+  margin-top: 25px;
+  border-top: 3px double #303133;
+}
+
+.footer-left,
+.footer-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.signature-item,
+.date-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.signature-label,
+.date-label {
+  font-size: 14px;
+  color: #909399;
+}
+
+.signature-value,
+.date-value {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
 }
 
 .dialog-footer {
   text-align: right;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .info-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .report-meta {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .report-footer {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
 }
 </style>

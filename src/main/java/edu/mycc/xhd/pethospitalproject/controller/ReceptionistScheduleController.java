@@ -73,7 +73,33 @@ public class ReceptionistScheduleController {
         }
         return result;
     }
-    
+
+    /**
+     * 更新单个前台排班（如果已存在则更新，不存在则创建）
+     */
+    @PutMapping
+    public Map<String, Object> updateSchedule(@RequestBody ReceptionistSchedule schedule) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            ReceptionistSchedule existing = receptionistScheduleService.findByDepartmentAndDateAndShift(
+                schedule.getDepartment(), schedule.getScheduleDate(), schedule.getShiftType());
+
+            if (existing != null) {
+                schedule.setId(existing.getId());
+                receptionistScheduleService.updateById(schedule);
+            } else {
+                receptionistScheduleService.save(schedule);
+            }
+            result.put("code", "0");
+            result.put("message", "更新成功");
+            result.put("data", schedule);
+        } catch (Exception e) {
+            result.put("code", "500");
+            result.put("message", e.getMessage());
+        }
+        return result;
+    }
+
     /**
      * 批量保存前台排班（覆盖模式：先删除日期范围内的排班再保存）
      */

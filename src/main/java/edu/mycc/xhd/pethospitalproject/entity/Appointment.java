@@ -33,6 +33,8 @@ public class Appointment {
     private String petBreed;
     @TableField(exist = false)
     private String doctorName;
+    @TableField(exist = false)
+    private String doctorTitle;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -181,6 +183,14 @@ public class Appointment {
 
     public void setDoctorName(String doctorName) {
         this.doctorName = doctorName;
+    }
+
+    public String getDoctorTitle() {
+        return doctorTitle;
+    }
+
+    public void setDoctorTitle(String doctorTitle) {
+        this.doctorTitle = doctorTitle;
     }
 
     public LocalDateTime getCreatedAt() {

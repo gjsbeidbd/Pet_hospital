@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -99,6 +100,7 @@ public class AppointmentController {
                 Doctor doctor = doctorMapper.selectById(app.getDoctorId());
                 if (doctor != null) {
                     app.setDoctorName(doctor.getName());
+                    app.setDoctorTitle(doctor.getPosition());
                 }
             }
             if (app.getPetId() != null) {
@@ -131,6 +133,7 @@ public class AppointmentController {
                 Doctor doctor = doctorMapper.selectById(app.getDoctorId());
                 if (doctor != null) {
                     app.setDoctorName(doctor.getName());
+                    app.setDoctorTitle(doctor.getPosition());
                 }
             }
             if (app.getPetId() != null) {
@@ -207,5 +210,24 @@ public class AppointmentController {
     public ResponseEntity<Appointment> takeNumber(@PathVariable Long id) {
         Appointment takenAppointment = appointmentService.takeNumber(id);
         return ResponseEntity.ok(takenAppointment);
+    }
+
+    // 获取今日已完成预约数量
+    @GetMapping("/today-completed/count")
+    public ResponseEntity<Map<String, Object>> getTodayCompletedCount() {
+        int count = appointmentService.getTodayCompletedCount();
+        return ResponseEntity.ok(Map.of("data", count));
+    }
+
+    @GetMapping("/month-completed/count")
+    public ResponseEntity<Map<String, Object>> getMonthCompletedCount() {
+        int count = appointmentService.getMonthCompletedCount();
+        return ResponseEntity.ok(Map.of("data", count));
+    }
+
+    @GetMapping("/department-count")
+    public ResponseEntity<List<Map<String, Object>>> getAppointmentCountByDepartment() {
+        List<Map<String, Object>> result = appointmentService.getAppointmentCountByDepartment();
+        return ResponseEntity.ok(result);
     }
 }

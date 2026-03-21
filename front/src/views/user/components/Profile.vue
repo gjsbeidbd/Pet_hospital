@@ -76,11 +76,12 @@ const handleAvatarSuccess = (response, uploadFile) => {
 // 自定义头像上传处理
 const handleAvatarUpload = async (options) => {
   const { file, onError, onSuccess } = options
-  
+
   const formData = new FormData()
   formData.append('file', file)
   formData.append('userId', profileForm.id)
-  
+  formData.append('userType', 'user')
+
   try {
     const response = await uploadUserAvatar(formData)
     onSuccess(response.data)

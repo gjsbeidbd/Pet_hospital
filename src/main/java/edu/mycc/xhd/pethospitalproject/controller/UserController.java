@@ -77,7 +77,7 @@ public class UserController {
         Map<String, String> response = new HashMap<>();
         
         if (success) {
-            response.put("message", "密码修改成功");
+            response.put("message", "");
             return ResponseEntity.ok(response);
         } else {
             response.put("error", "旧密码输入错误，请重新输入！");

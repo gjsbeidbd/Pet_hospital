@@ -119,15 +119,25 @@
       </el-form-item>
       
       <el-form-item label="指定医生" prop="doctorId">
-        <el-select v-model="bookingForm.doctorId" placeholder="请选择医生" style="width: 100%" :disabled="!bookingForm.appointmentDate || !bookingForm.department || !doctors || doctors.length === 0">
-          <el-option 
-            v-for="doctor in doctors || []" 
-            :key="doctor.id" 
+        <el-select
+          v-model="bookingForm.doctorId"
+          placeholder="请选择医生"
+          style="width: 100%"
+          :disabled="!bookingForm.appointmentDate || !bookingForm.department"
+          clearable
+        >
+          <el-option
+            v-for="doctor in doctors || []"
+            :key="doctor.id"
             :label="getDoctorLabel(doctor)"
             :value="doctor.id"
           ></el-option>
         </el-select>
-        <div v-if="bookingForm.appointmentDate && bookingForm.department" style="font-size: 12px; color: #909399; margin-top: 5px; display: flex; align-items: center; gap: 4px;">
+        <div v-if="bookingForm.appointmentDate && bookingForm.department && doctors && doctors.length === 0" style="font-size: 12px; color: #e6a23c; margin-top: 5px; display: flex; align-items: center; gap: 4px;">
+          <el-icon><WarningFilled /></el-icon>
+          <span>该科室医生今日休息，请选择其他日期预约！</span>
+        </div>
+        <div v-else-if="bookingForm.appointmentDate && bookingForm.department" style="font-size: 12px; color: #909399; margin-top: 5px; display: flex; align-items: center; gap: 4px;">
           <el-icon><InfoFilled /></el-icon>
           <span>仅显示 {{ bookingForm.appointmentDate }} 值班的医生</span>
         </div>
@@ -179,7 +189,7 @@
 <script setup>
 import { ref, defineProps, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { InfoFilled } from '@element-plus/icons-vue'
+import { InfoFilled, WarningFilled } from '@element-plus/icons-vue'
 import { getUserAppointments, createAppointment, cancelAppointment, getDepartments, getDoctorsByDepartment, getOnDutyDoctorsByDateAndDepartment } from '@/services/api'
 
 // 定义props

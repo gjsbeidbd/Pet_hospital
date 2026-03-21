@@ -66,4 +66,14 @@ public class ReceptionistService extends ServiceImpl<ReceptionistMapper, Recepti
     public Receptionist authenticateByPhoneOrEmail(String phoneOrEmail, String password) {
         return receptionistMapper.authenticateByPhoneOrEmailAndPassword(phoneOrEmail, password);
     }
+
+    public boolean changePassword(Long id, String oldPassword, String newPassword) {
+        Receptionist receptionist = receptionistMapper.selectById(id);
+        if (receptionist != null && receptionist.getPassword().equals(oldPassword)) {
+            receptionist.setPassword(newPassword);
+            int result = receptionistMapper.updateById(receptionist);
+            return result > 0;
+        }
+        return false;
+    }
 }

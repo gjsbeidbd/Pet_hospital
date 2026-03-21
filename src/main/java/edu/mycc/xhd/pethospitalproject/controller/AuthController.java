@@ -133,6 +133,35 @@ public class AuthController {
         }
     }
 
+    @PutMapping("/receptionist/{id}")
+    public ResponseEntity<Map<String, String>> updateReceptionistInfo(@PathVariable Long id, @RequestBody Receptionist receptionist) {
+        receptionist.setId(id);
+        boolean success = receptionistService.updateById(receptionist);
+        Map<String, String> response = new HashMap<>();
+        if (success) {
+            response.put("message", "个人信息更新成功");
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("error", "个人信息更新失败");
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PutMapping("/receptionist/{id}/password")
+    public ResponseEntity<Map<String, String>> changeReceptionistPassword(@PathVariable Long id, @RequestBody Map<String, String> passwordData) {
+        String oldPassword = passwordData.get("oldPassword");
+        String newPassword = passwordData.get("newPassword");
+        Map<String, String> response = new HashMap<>();
+        boolean success = receptionistService.changePassword(id, oldPassword, newPassword);
+        if (success) {
+            response.put("message", "密码修改成功");
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("error", "旧密码输入错误，请重新输入");
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
     @GetMapping("/doctor/{id}")
     public ResponseEntity<Doctor> getDoctorInfo(@PathVariable Long id) {
         Doctor doctor = doctorService.getById(id);
@@ -140,6 +169,35 @@ public class AuthController {
             return ResponseEntity.ok(doctor);
         } else {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PutMapping("/doctor/{id}")
+    public ResponseEntity<Map<String, String>> updateDoctorInfo(@PathVariable Long id, @RequestBody Doctor doctor) {
+        doctor.setId(id);
+        boolean success = doctorService.updateById(doctor);
+        Map<String, String> response = new HashMap<>();
+        if (success) {
+            response.put("message", "个人信息更新成功");
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("error", "个人信息更新失败");
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PutMapping("/doctor/{id}/password")
+    public ResponseEntity<Map<String, String>> changeDoctorPassword(@PathVariable Long id, @RequestBody Map<String, String> passwordData) {
+        String oldPassword = passwordData.get("oldPassword");
+        String newPassword = passwordData.get("newPassword");
+        Map<String, String> response = new HashMap<>();
+        boolean success = doctorService.changePassword(id, oldPassword, newPassword);
+        if (success) {
+            response.put("message", "密码修改成功");
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("error", "旧密码输入错误，请重新输入");
+            return ResponseEntity.badRequest().body(response);
         }
     }
 }

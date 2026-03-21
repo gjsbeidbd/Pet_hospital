@@ -17,6 +17,7 @@ public class Doctor {
     private String position; // 职称（如：住院医师、主治医师等）
     private String phone;
     private String email;
+    private String avatar;
     private String hireDate;
     private String password;
     private String status;
@@ -25,7 +26,7 @@ public class Doctor {
     public Doctor() {}
     
     public Doctor(Long id, String employeeId, String name, String birthday, String idCard, String address,
-                 String department, String position, String phone, String email, String hireDate, 
+                 String department, String position, String phone, String email, String avatar, String hireDate,
                  String password, String status) {
         this.id = id;
         this.employeeId = employeeId;
@@ -37,6 +38,7 @@ public class Doctor {
         this.position = position;
         this.phone = phone;
         this.email = email;
+        this.avatar = avatar;
         this.hireDate = hireDate;
         this.password = password;
         this.status = status;
@@ -122,7 +124,15 @@ public class Doctor {
     public void setEmail(String email) {
         this.email = email;
     }
-    
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+
     public String getHireDate() {
         return hireDate;
     }

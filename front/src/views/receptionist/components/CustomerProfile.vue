@@ -64,7 +64,7 @@
           <el-col :span="12">
             <el-card header="客户信息" shadow="never">
               <el-form-item label="手机号">
-                <el-input v-model="customerForm.phone" placeholder="请输入手机号"></el-input>
+                <el-input v-model="customerForm.phone" placeholder="请输入手机号" maxlength="11" show-word-limit></el-input>
               </el-form-item>
               <el-form-item label="真实姓名">
                 <el-input v-model="customerForm.name" placeholder="请输入真实姓名"></el-input>
@@ -107,6 +107,12 @@
                       <el-form-item label="品种">
                         <el-select v-model="petForm.breed" placeholder="请选择品种" style="width: 100%" filterable>
                           <el-option v-for="breed in getBreedOptions(petForm.species)" :key="breed" :label="breed" :value="breed"></el-option>
+                        </el-select>
+                      </el-form-item>
+                      <el-form-item label="性别">
+                        <el-select v-model="petForm.gender" placeholder="请选择性别" style="width: 100%">
+                          <el-option label="雄性" value="雄性"></el-option>
+                          <el-option label="雌性" value="雌性"></el-option>
                         </el-select>
                       </el-form-item>
                       <el-form-item label="年龄(岁)">
@@ -182,6 +188,12 @@
                       <el-form-item label="品种">
                         <el-select v-model="petForm.breed" placeholder="请选择品种" style="width: 100%" filterable>
                           <el-option v-for="breed in getBreedOptions(petForm.species)" :key="breed" :label="breed" :value="breed"></el-option>
+                        </el-select>
+                      </el-form-item>
+                      <el-form-item label="性别">
+                        <el-select v-model="petForm.gender" placeholder="请选择性别" style="width: 100%">
+                          <el-option label="雄性" value="雄性"></el-option>
+                          <el-option label="雌性" value="雌性"></el-option>
                         </el-select>
                       </el-form-item>
                       <el-form-item label="年龄(岁)">
@@ -322,6 +334,7 @@ const fetchData = async () => {
             name: pet.name,
             species: pet.species,
             breed: pet.breed,
+            gender: pet.gender,
             age: pet.age,
             weight: pet.weight,
             medicalHistory: pet.medicalHistory
@@ -357,11 +370,12 @@ const addNewPetForm = () => {
   if (newPetForms.value.length > 0) {
     newPetFormCollapsed.value[newPetForms.value.length - 1] = true;
   }
-  
+
   newPetForms.value.push({
     name: '',
     species: '狗',
     breed: '',
+    gender: '雄性',
     age: null,
     weight: null,
     medicalHistory: ''
@@ -382,11 +396,12 @@ const addEditPetForm = () => {
   if (editPetForms.value.length > 0) {
     editPetFormCollapsed.value[editPetForms.value.length - 1] = true;
   }
-  
+
   editPetForms.value.push({
     name: '',
     species: '狗',
     breed: '',
+    gender: '雄性',
     age: null,
     weight: null,
     medicalHistory: ''
@@ -428,6 +443,7 @@ const openEditProfileDialog = (customer) => {
         name: pet.name,
         species: pet.species || '狗',
         breed: pet.breed || '',
+        gender: pet.gender || '雄性',
         age: pet.age,
         weight: pet.weight,
         medicalHistory: pet.medicalHistory || ''
@@ -465,8 +481,8 @@ const handleCreateProfile = async () => {
     return ElMessage.error('请填写完整的客户信息')
   }
   
-  if (customerForm.phone.length !== 11) {
-    return ElMessage.error('手机号必须为11位')
+  if (customerForm.phone.length !== 11 || !/^1\d{10}$/.test(customerForm.phone)) {
+    return ElMessage.error('手机号必须为1开头的11位数字')
   }
   
   for (let i = 0; i < newPetForms.value.length; i++) {
@@ -496,6 +512,7 @@ const handleCreateProfile = async () => {
         name: petForm.name,
         species: petForm.species,
         breed: petForm.breed,
+        gender: petForm.gender,
         age: petForm.age,
         weight: petForm.weight,
         medicalHistory: petForm.medicalHistory
@@ -517,6 +534,12 @@ const handleCreateProfile = async () => {
 const handleUpdateProfile = async () => {
   if (!editCustomerForm.name) {
     return ElMessage.error('请填写客户姓名')
+  }
+  
+  for (let i = 0; i < editPetForms.value.length; i++) {
+    if (!editPetForms.value[i].name) {
+      return ElMessage.error(`请填写第 ${i + 1} 个宠物的名字`)
+    }
   }
   
   try {
@@ -546,6 +569,7 @@ const handleUpdateProfile = async () => {
         name: petForm.name,
         species: petForm.species,
         breed: petForm.breed,
+        gender: petForm.gender,
         age: petForm.age,
         weight: petForm.weight,
         medicalHistory: petForm.medicalHistory
@@ -555,7 +579,15 @@ const handleUpdateProfile = async () => {
         await updatePet(petForm.id, petData)
         existingPetIds.push(petForm.id)
       } else {
-        await addPet(petData)
+        console.log('添加新宠物:', petData)
+        const res = await addPet(petData)
+        console.log('添加结果:', res)
+        if (!res.data || res.data.error) {
+          throw new Error(res.data?.error || '添加宠物失败')
+        }
+        if (res.data.id) {
+          existingPetIds.push(res.data.id)
+        }
       }
     }
     

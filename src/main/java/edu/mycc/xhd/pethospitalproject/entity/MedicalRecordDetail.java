@@ -8,6 +8,7 @@ import java.time.LocalDate;
 public class MedicalRecordDetail {
     // 病历信息
     private Long id;
+    private Long appointmentId;
     private LocalDate visitDate;
     private String diagnosis;
     private String treatment;
@@ -40,14 +41,15 @@ public class MedicalRecordDetail {
     // Constructors
     public MedicalRecordDetail() {}
     
-    public MedicalRecordDetail(Long id, LocalDate visitDate, String diagnosis, String treatment, 
-                               String prescription, String examination, String examinationResult, 
-                               String surgery, String surgeryResult, String notes, 
+    public MedicalRecordDetail(Long id, Long appointmentId, LocalDate visitDate, String diagnosis, String treatment,
+                               String prescription, String examination, String examinationResult,
+                               String surgery, String surgeryResult, String notes,
                                Boolean followUpRequired, LocalDate followUpDate,
                                Long petId, String petName, String petBreed, Integer petAge, String petGender,
                                Long ownerId, String ownerName, String ownerPhone,
                                Long doctorId, String doctorName, String department) {
         this.id = id;
+        this.appointmentId = appointmentId;
         this.visitDate = visitDate;
         this.diagnosis = diagnosis;
         this.treatment = treatment;
@@ -80,7 +82,15 @@ public class MedicalRecordDetail {
     public void setId(Long id) {
         this.id = id;
     }
-    
+
+    public Long getAppointmentId() {
+        return appointmentId;
+    }
+
+    public void setAppointmentId(Long appointmentId) {
+        this.appointmentId = appointmentId;
+    }
+
     public LocalDate getVisitDate() {
         return visitDate;
     }

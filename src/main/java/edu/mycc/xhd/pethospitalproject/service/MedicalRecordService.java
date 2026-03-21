@@ -33,6 +33,15 @@ public class MedicalRecordService {
     }
 
     /**
+     * 根据医生ID获取病历详情（包含关联数据）
+     * @param doctorId 医生ID
+     * @return 病历详情列表
+     */
+    public List<MedicalRecordDetail> getMedicalRecordDetailsByDoctorId(Long doctorId) {
+        return medicalRecordMapper.selectDetailByDoctorId(doctorId);
+    }
+
+    /**
      * 添加病历
      * @param medicalRecord 病历信息
      * @return 是否添加成功

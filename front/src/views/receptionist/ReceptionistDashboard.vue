@@ -105,12 +105,12 @@ const menuList = [
     children: [
       {
         index: '6-1',
-        title: '修改个人信息',
+        title: '信息管理',
         icon: 'Edit'
       },
       {
         index: '6-2',
-        title: '账户密码修改',
+        title: '账户管理',
         icon: 'Lock'
       }
     ]
@@ -172,16 +172,13 @@ const fetchUserInfo = async () => {
     if (userId) {
       const response = await getReceptionistInfo(userId);
       userName.value = response.data.name || '前台人员';
-      // 设置用户头像
-      let avatarUrl = response.data.image || 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png';
+      let avatarUrl = response.data.avatar || 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png';
       if (avatarUrl && !avatarUrl.startsWith('http') && !avatarUrl.startsWith('https')) {
         avatarUrl = 'http://localhost:8080' + avatarUrl;
       }
       userAvatar.value = avatarUrl;
-      
-      // 保存科室信息到 localStorage
+
       if (response.data.department) {
-        console.log('保存科室信息:', response.data.department)
         localStorage.setItem('receptionistInfo', JSON.stringify({
           department: response.data.department
         }));

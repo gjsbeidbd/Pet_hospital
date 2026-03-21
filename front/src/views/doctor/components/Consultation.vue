@@ -281,6 +281,142 @@
         </el-table-column>
       </el-table>
     </div>
+
+    <!-- 详情弹窗 -->
+    <el-dialog v-model="detailDialogVisible" title="病历详情" width="60%" top="5vh">
+      <div v-if="selectedRecord" class="medical-record-detail">
+        <div class="report-header">
+          <h1 class="hospital-name">宠物医院信息管理系统病历报告</h1>
+          <div class="report-meta">
+            <div class="meta-item">
+              <span class="meta-label">报告编号：</span>
+              <span class="meta-value">MR-{{ selectedRecord.id || '000000' }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">就诊日期：</span>
+              <span class="meta-value">{{ selectedRecord.visitDate }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">预约信息</div>
+          <div class="info-grid-3">
+            <div class="info-item">
+              <span class="label">宠物名称：</span>
+              <span class="value">{{ selectedRecord.petName || '未知' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">宠物品种：</span>
+              <span class="value">{{ selectedRecord.petBreed || '未知' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">宠物年龄：</span>
+              <span class="value">{{ selectedRecord.petAge || '未知' }}岁</span>
+            </div>
+            <div class="info-item">
+              <span class="label">宠物性别：</span>
+              <span class="value">{{ selectedRecord.petGender || '未知' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">主治医生：</span>
+              <span class="value">{{ selectedRecord.doctorName || '未知医生' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">就诊科室：</span>
+              <span class="value">{{ selectedRecord.department || '未知科室' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">主诉与症状</div>
+          <div class="info-list">
+            <div class="info-item-full">
+              <span class="label">临床症状：</span>
+              <span class="value">{{ selectedRecord.symptoms || selectedRecord.treatment || '无' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block" v-if="selectedRecord.examination">
+          <div class="section-title">检查项目</div>
+          <div class="info-list">
+            <div class="info-item-full">
+              <span class="label">检查项目：</span>
+              <span class="value">{{ selectedRecord.examination }}</span>
+            </div>
+            <div class="info-item-full" v-if="selectedRecord.examinationResult">
+              <span class="label">检查结果：</span>
+              <span class="value result-text">{{ selectedRecord.examinationResult }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block" v-if="selectedRecord.surgery">
+          <div class="section-title">手术项目</div>
+          <div class="info-list">
+            <div class="info-item-full">
+              <span class="label">手术项目：</span>
+              <span class="value">{{ selectedRecord.surgery }}</span>
+            </div>
+            <div class="info-item-full" v-if="selectedRecord.surgeryResult">
+              <span class="label">手术结果：</span>
+              <span class="value result-text">{{ selectedRecord.surgeryResult }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">诊断结果</div>
+          <div class="diagnosis-content">{{ selectedRecord.diagnosis || '暂无诊断结果' }}</div>
+        </div>
+
+        <div class="section-block" v-if="selectedRecord.prescription && parsePrescriptionDrugs(selectedRecord.prescription).length > 0">
+          <div class="section-title">处方信息</div>
+          <div class="prescription-list">
+            <div v-for="(drug, index) in parsePrescriptionDrugs(selectedRecord.prescription)" :key="index" class="drug-item">
+              <div class="drug-line">
+                <span class="drug-name">{{ drug.name }}</span>
+                <span class="drug-type">（{{ drug.type || '其他' }}）</span>
+                <span class="drug-count">{{ drug.count }} {{ drug.unit || '' }}</span>
+              </div>
+              <div class="drug-usage">用法用量：{{ drug.usage || '遵医嘱' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block" v-if="parsePrescriptionAdvices(selectedRecord.prescription)">
+          <div class="section-title">医嘱建议</div>
+          <div class="advices-content">{{ parsePrescriptionAdvices(selectedRecord.prescription) }}</div>
+        </div>
+
+        <div class="section-block" v-if="selectedRecord.treatment">
+          <div class="section-title">治疗方案</div>
+          <div class="advices-content">{{ selectedRecord.treatment }}</div>
+        </div>
+
+        <div class="section-block" v-if="selectedRecord.notes">
+          <div class="section-title">备注信息</div>
+          <div class="notes-content">{{ selectedRecord.notes }}</div>
+        </div>
+
+        <div class="report-footer">
+          <div class="footer-left">
+            <div class="signature-item">
+              <span class="signature-label">主治医生签名：</span>
+              <span class="signature-value">{{ selectedRecord.doctorName || '________' }}</span>
+            </div>
+          </div>
+          <div class="footer-right">
+            <div class="date-item">
+              <span class="date-label">报告日期：</span>
+              <span class="date-value">{{ selectedRecord.visitDate }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
   </el-drawer>
 </template>
 
@@ -288,7 +424,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Service, Refresh, Plus, Delete, ArrowRight, ArrowDown } from '@element-plus/icons-vue'
-import { startConsultation as startConsultationAPI, finishConsultation as finishConsultationAPI, getFeeItems, addMedicalRecord, getMedicalRecordsByDoctorId, updateMedicalRecord, addBilling } from '@/services/api'
+import { startConsultation as startConsultationAPI, finishConsultation as finishConsultationAPI, getFeeItems, addMedicalRecord, getMedicalRecordDetailsByDoctorId, updateMedicalRecord, addBilling } from '@/services/api'
 
 // 定义props
 const props = defineProps({
@@ -312,6 +448,8 @@ const expandedPatientId = ref(null)
 const examinationOptions = ref([]) // 检查项目选项
 const surgeryOptions = ref([]) // 手术项目选项
 const patientHistory = ref([]) // 患者历史病历数据
+const detailDialogVisible = ref(false)
+const selectedRecord = ref(null)
 
 const medicalForm = reactive({
   symptoms: '',
@@ -337,30 +475,27 @@ const viewHistory = async () => {
     ElMessage.warning('请先选择患者')
     return
   }
-  
+
   try {
     const doctorId = localStorage.getItem('userId')
-    // 获取该患者的历史病历记录
-    const medicalRecordsRes = await getMedicalRecordsByDoctorId(parseInt(doctorId))
+    const medicalRecordsRes = await getMedicalRecordDetailsByDoctorId(parseInt(doctorId))
     const medicalRecords = medicalRecordsRes.data || []
-    
-    // 过滤出当前患者的历史记录
-    const patientRecords = medicalRecords.filter(record => 
-      record.petId === currentPatient.value.id || record.appointmentId === currentPatient.value.id
+
+    const patientRecords = medicalRecords.filter(record =>
+      record.petId === currentPatient.value.petId || record.petId === currentPatient.value.id
     )
-    
-    // 转换为表格显示格式
+
     patientHistory.value = patientRecords.map(record => ({
       id: record.id,
       visitDate: record.visitDate,
-      doctorName: '当前医生', // 这里可以扩展为获取医生姓名
+      doctorName: record.doctorName || '未知医生',
       diagnosis: record.diagnosis || '暂无诊断',
       examination: record.examination || '',
       surgery: record.surgery || '',
       prescriptionCount: record.prescription ? JSON.parse(record.prescription).drugs?.length || 0 : 0,
-      fullRecord: record // 保存完整记录用于详情查看
+      fullRecord: record
     }))
-    
+
     historyDrawer.value = true
   } catch (error) {
     console.error('获取历史病历失败:', error)
@@ -370,26 +505,32 @@ const viewHistory = async () => {
 
 // 查看病历详情
 const viewMedicalRecordDetail = (record) => {
-  ElMessageBox.alert(
-    `<div style="max-height: 400px; overflow-y: auto;">
-      <h3 style="margin-bottom: 15px;">病历详情</h3>
-      <p><strong>就诊日期：</strong>${record.visitDate}</p>
-      <p><strong>诊断结果：</strong>${record.diagnosis || '无'}</p>
-      <p><strong>检查项目：</strong>${record.examination || '无'}</p>
-      <p><strong>检查结果：</strong>${record.fullRecord.examinationResult || '无'}</p>
-      <p><strong>手术项目：</strong>${record.surgery || '无'}</p>
-      <p><strong>手术结果：</strong>${record.fullRecord.surgeryResult || '无'}</p>
-      <p><strong>处方药品：</strong>${record.prescriptionCount > 0 ? record.prescriptionCount + '种药品' : '无'}</p>
-      <p><strong>治疗方案：</strong>${record.fullRecord.treatment || '无'}</p>
-      <p><strong>备注：</strong>${record.fullRecord.notes || '无'}</p>
-    </div>`,
-    '病历详情',
-    {
-      dangerouslyUseHTMLString: true,
-      confirmButtonText: '关闭',
-      customClass: 'medical-record-detail-dialog'
-    }
-  )
+  selectedRecord.value = record.fullRecord || record
+  detailDialogVisible.value = true
+}
+
+// 解析处方药品数据
+const parsePrescriptionDrugs = (prescription) => {
+  try {
+    if (!prescription) return []
+    const data = JSON.parse(prescription)
+    return data.drugs || []
+  } catch (error) {
+    console.error('解析处方数据失败:', error)
+    return []
+  }
+}
+
+// 解析处方医嘱
+const parsePrescriptionAdvices = (prescription) => {
+  try {
+    if (!prescription) return ''
+    const data = JSON.parse(prescription)
+    return data.advices || ''
+  } catch (error) {
+    console.error('解析处方医嘱失败:', error)
+    return ''
+  }
 }
 
 // 加载检查项目选项
@@ -486,7 +627,7 @@ const saveDraft = async () => {
   try {
     // 获取当前医生的病历记录
     const doctorId = localStorage.getItem('userId')
-    const res = await getMedicalRecordsByDoctorId(doctorId)
+    const res = await getMedicalRecordDetailsByDoctorId(doctorId)
     const medicalRecords = res.data || []
     
     // 查找与该患者相关的最近病历记录
@@ -562,11 +703,11 @@ const loadExistingForm = async (patient) => {
   try {
     // 获取当前医生的病历记录
     const doctorId = localStorage.getItem('userId')
-    const res = await getMedicalRecordsByDoctorId(doctorId)
+    const res = await getMedicalRecordDetailsByDoctorId(doctorId)
     const medicalRecords = res.data || []
-    
+
     // 查找与该患者相关的最近病历记录
-    const patientRecords = medicalRecords.filter(record => 
+    const patientRecords = medicalRecords.filter(record =>
       record.appointmentId === patient.id
     )
     
@@ -723,7 +864,7 @@ const finishDiagnose = () => {
       const doctorId = localStorage.getItem('userId')
       
       // 查找与该患者相关的最近病历记录
-      const medicalRecordsRes = await getMedicalRecordsByDoctorId(parseInt(doctorId))
+      const medicalRecordsRes = await getMedicalRecordDetailsByDoctorId(parseInt(doctorId))
       const medicalRecords = medicalRecordsRes.data || []
       const patientRecords = medicalRecords.filter(record => 
         record.appointmentId === currentPatient.value.id
@@ -950,5 +1091,211 @@ defineExpose({
   padding-left: 10px;
   margin-bottom: 15px;
   font-size: 16px;
+}
+
+.medical-record-detail {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 20px;
+  background: #fff;
+}
+
+.report-header {
+  text-align: center;
+  padding-bottom: 20px;
+  border-bottom: 3px double #303133;
+  margin-bottom: 25px;
+}
+
+.hospital-name {
+  font-size: 24px;
+  color: #303133;
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+
+.report-meta {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 15px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meta-label {
+  font-size: 14px;
+  color: #909399;
+}
+
+.meta-value {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.section-block {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #dcdfe6;
+}
+
+.section-block:last-of-type {
+  border-bottom: none;
+}
+
+.info-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.info-item .label {
+  font-size: 13px;
+  color: #909399;
+  font-weight: 500;
+}
+
+.info-item .value {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item-full {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.info-item-full .label {
+  font-size: 13px;
+  color: #909399;
+  font-weight: 500;
+}
+
+.info-item-full .value {
+  font-size: 14px;
+  color: #303133;
+  line-height: 1.6;
+}
+
+.result-text {
+  color: #606266;
+  font-weight: 500;
+}
+
+.diagnosis-content {
+  font-size: 15px;
+  color: #303133;
+  font-weight: 500;
+  line-height: 1.8;
+  padding: 10px 0;
+}
+
+.prescription-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drug-item {
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #dcdfe6;
+}
+
+.drug-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.drug-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.drug-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.drug-type {
+  font-size: 13px;
+  color: #909399;
+}
+
+.drug-count {
+  font-size: 13px;
+  color: #606266;
+  margin-left: auto;
+}
+
+.drug-usage {
+  font-size: 13px;
+  color: #606266;
+  padding-left: 0;
+}
+
+.advices-content,
+.notes-content {
+  font-size: 14px;
+  color: #606266;
+  line-height: 1.8;
+  padding: 10px 0;
+}
+
+.report-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20px;
+  margin-top: 25px;
+  border-top: 3px double #303133;
+}
+
+.footer-left,
+.footer-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.signature-item,
+.date-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.signature-label,
+.date-label {
+  font-size: 14px;
+  color: #909399;
+}
+
+.signature-value,
+.date-value {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
 }
 </style>

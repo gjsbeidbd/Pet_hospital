@@ -99,6 +99,7 @@
 import { ref, onMounted } from 'vue'
 import { User, Calendar, Document, Bell } from '@element-plus/icons-vue'
 import CountTo from 'vue-count-to/src/vue-countTo.vue'
+import { getAnnouncements } from '@/services/api'
 
 // 数据
 const petCount = ref(2)
@@ -112,15 +113,28 @@ const recentAppointments = ref([
   { date: '2023-08-10 09:30', petName: '小黑', doctor: '张医生', desc: '疫苗接种', status: '已取消' }
 ])
 
-const announcements = ref([
-  { title: '医院春节放假通知', date: '2023-12-01' },
-  { title: '新增在线预约功能', date: '2023-11-15' }
-])
+const announcements = ref([])
+
+const loadAnnouncements = async () => {
+  try {
+    const res = await getAnnouncements('USER')
+    announcements.value = (res.data || []).map(a => ({
+      title: a.title,
+      date: a.publishDate ? new Date(a.publishDate).toLocaleDateString('zh-CN') : ''
+    }))
+  } catch (error) {
+    console.error('获取公告失败:', error)
+  }
+}
 
 // 方法
 const handleSetLineChartData = (type) => {
   console.log('查看数据:', type)
 }
+
+onMounted(() => {
+  loadAnnouncements()
+})
 
 const getStatusType = (status) => {
   switch (status) {

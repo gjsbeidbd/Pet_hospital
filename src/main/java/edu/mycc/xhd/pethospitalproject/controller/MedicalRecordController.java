@@ -72,6 +72,17 @@ public class MedicalRecordController {
     }
 
     /**
+     * 获取医生病历详情列表（包含关联的宠物、主人、医生信息）
+     * @param doctorId 医生ID
+     * @return 病历详情列表
+     */
+    @GetMapping("/doctor/detail")
+    public ResponseEntity<List<MedicalRecordDetail>> getMedicalRecordDetailsByDoctorId(@RequestParam Long doctorId) {
+        List<MedicalRecordDetail> medicalRecords = medicalRecordService.getMedicalRecordDetailsByDoctorId(doctorId);
+        return ResponseEntity.ok(medicalRecords);
+    }
+
+    /**
      * 添加病历
      * @param medicalRecord 病历信息
      * @return 添加结果

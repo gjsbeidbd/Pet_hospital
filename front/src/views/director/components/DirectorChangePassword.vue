@@ -47,7 +47,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import { changeDoctorPassword } from '@/services/api'
+import { changeDirectorPassword } from '@/services/api'
 
 const passwordFormRef = ref()
 
@@ -95,7 +95,7 @@ const handleChangePassword = () => {
           newPassword: passwordForm.newPassword
         }
 
-        await changeDoctorPassword(userId, passwordData)
+        await changeDirectorPassword(userId, passwordData)
         ElMessage.success('密码修改成功')
 
         passwordForm.oldPassword = ''

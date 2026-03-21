@@ -3,18 +3,39 @@
     <el-row :gutter="20" class="change-password-row">
       <el-col :span="24">
         <el-card header="账户安全设置" class="change-password-card">
-          <el-form label-width="100px" style="max-width: 600px;">
-            <el-form-item label="旧密码">
-              <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入旧密码"></el-input>
+          <el-form
+            label-width="100px"
+            style="max-width: 600px;"
+            :model="passwordForm"
+            :rules="passwordRules"
+            ref="passwordFormRef"
+          >
+            <el-form-item label="旧密码" prop="oldPassword">
+              <el-input
+                v-model="passwordForm.oldPassword"
+                type="password"
+                show-password
+                placeholder="请输入旧密码"
+              ></el-input>
             </el-form-item>
-            <el-form-item label="新密码">
-              <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="请输入新密码"></el-input>
+            <el-form-item label="新密码" prop="newPassword">
+              <el-input
+                v-model="passwordForm.newPassword"
+                type="password"
+                show-password
+                placeholder="请输入新密码"
+              ></el-input>
             </el-form-item>
-            <el-form-item label="确认新密码">
-              <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码"></el-input>
+            <el-form-item label="确认新密码" prop="confirmPassword">
+              <el-input
+                v-model="passwordForm.confirmPassword"
+                type="password"
+                show-password
+                placeholder="请再次输入新密码"
+              ></el-input>
             </el-form-item>
             <el-form-item>
-              <el-button type="warning" @click="updatePassword">更新密码</el-button>
+              <el-button type="warning" @click="handleChangePassword">更新密码</el-button>
             </el-form-item>
           </el-form>
         </el-card>
@@ -24,52 +45,68 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
+import { changeReceptionistPassword } from '@/services/api'
 
-// 密码表单
+const passwordFormRef = ref()
+
 const passwordForm = reactive({
   oldPassword: '',
   newPassword: '',
   confirmPassword: ''
 })
 
-// 密码验证规则
-const validatePassword = () => {
-  if (!passwordForm.oldPassword) {
-    ElMessage.error('请输入旧密码')
-    return false
-  }
-  if (!passwordForm.newPassword) {
-    ElMessage.error('请输入新密码')
-    return false
-  }
-  if (passwordForm.newPassword.length < 6) {
-    ElMessage.error('新密码长度至少6位')
-    return false
-  }
-  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-    ElMessage.error('两次输入的密码不一致')
-    return false
-  }
-  return true
+const passwordRules = {
+  oldPassword: [
+    { required: true, message: '请输入旧密码', trigger: 'blur' }
+  ],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请确认新密码', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (value !== passwordForm.newPassword) {
+          callback(new Error('两次输入的密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ]
 }
 
-// 更新密码
-const updatePassword = () => {
-  if (!validatePassword()) {
-    return
-  }
-  
-  // 这里可以添加实际的后端API调用逻辑
-  console.log('提交密码修改:', passwordForm)
-  
-  ElMessage.success('密码修改成功！')
-  
-  // 重置表单
-  passwordForm.oldPassword = ''
-  passwordForm.newPassword = ''
-  passwordForm.confirmPassword = ''
+const handleChangePassword = () => {
+  passwordFormRef.value.validate(async (valid) => {
+    if (valid) {
+      try {
+        const userId = localStorage.getItem('userId')
+        if (!userId) {
+          ElMessage.error('用户未登录')
+          return
+        }
+
+        const passwordData = {
+          oldPassword: passwordForm.oldPassword,
+          newPassword: passwordForm.newPassword
+        }
+
+        await changeReceptionistPassword(userId, passwordData)
+        ElMessage.success('密码修改成功')
+
+        passwordForm.oldPassword = ''
+        passwordForm.newPassword = ''
+        passwordForm.confirmPassword = ''
+      } catch (error) {
+        console.error('修改密码失败:', error)
+        ElMessage.error(error.response?.data?.error || '修改密码失败')
+      }
+    }
+  })
 }
 </script>
 

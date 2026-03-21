@@ -158,6 +158,14 @@
                         <el-option label="重要公告" value="important"></el-option>
                       </el-select>
                     </el-form-item>
+                    <el-form-item label="可见类别">
+                      <el-select v-model="announcementForm.category" placeholder="请选择可见类别" style="width: 100%" clearable>
+                        <el-option label="全部" value="ALL"></el-option>
+                        <el-option label="用户" value="USER"></el-option>
+                        <el-option label="前台" value="RECEPTIONIST"></el-option>
+                        <el-option label="医生" value="DOCTOR"></el-option>
+                      </el-select>
+                    </el-form-item>
                     <el-form-item label="公告内容">
                       <el-input 
                         v-model="announcementForm.content" 
@@ -186,16 +194,21 @@
                     </div>
                   </template>
                   <el-table :data="announcements" border style="width: 100%" height="450" class="announcement-table">
-                    <el-table-column prop="title" label="标题" min-width="140" show-overflow-tooltip></el-table-column>
-                    <el-table-column prop="type" label="类型" width="90" align="center">
+                    <el-table-column prop="title" label="标题" min-width="120" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="announcementType" label="类型" width="80" align="center">
                       <template #default="scope">
-                        <el-tag :type="getAnnouncementTypeTag(scope.row.type)" size="small">
-                          {{ getAnnouncementTypeName(scope.row.type) }}
+                        <el-tag :type="getAnnouncementTypeTag(scope.row.announcementType)" size="small">
+                          {{ getAnnouncementTypeName(scope.row.announcementType) }}
                         </el-tag>
                       </template>
                     </el-table-column>
-                    <el-table-column prop="publishDate" label="日期" width="110" align="center"></el-table-column>
-                    <el-table-column label="操作" width="120" fixed="right" align="center">
+                    <el-table-column prop="category" label="可见" width="80" align="center">
+                      <template #default="scope">
+                        <el-tag size="small">{{ getCategoryName(scope.row.category) }}</el-tag>
+                      </template>
+                    </el-table-column>
+                    <el-table-column prop="publishDate" label="日期" width="100" align="center"></el-table-column>
+                    <el-table-column label="操作" width="100" fixed="right" align="center">
                       <template #default="scope">
                         <el-button type="primary" link size="small" @click="viewAnnouncement(scope.row)">查看</el-button>
                         <el-button type="danger" link size="small" @click="deleteAnnouncement(scope.row)">删除</el-button>
@@ -316,6 +329,36 @@
         <el-button type="primary" @click="submitDepartmentForm" :loading="departmentSubmitting">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 新增品种对话框 -->
+    <el-dialog
+      v-model="breedDialogVisible"
+      title="添加品种"
+      width="500px"
+      @close="resetBreedForm"
+    >
+      <el-form :model="breedForm" label-width="100px" :rules="breedRules" ref="breedFormRef">
+        <el-form-item label="所属种类">
+          <el-input v-model="breedForm.speciesName" disabled></el-input>
+        </el-form-item>
+        <el-form-item label="品种名称" prop="breedName">
+          <el-input v-model="breedForm.breedName" placeholder="请输入品种名称" maxlength="100"></el-input>
+        </el-form-item>
+        <el-form-item label="品种描述">
+          <el-input
+            v-model="breedForm.description"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入品种描述（可选）"
+            maxlength="500"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="breedDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitBreedForm" :loading="breedSubmitting">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -323,10 +366,10 @@
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, CircleCheckFilled, RefreshLeft } from '@element-plus/icons-vue';
-import { 
-  getFeeItems, 
-  addFeeItem, 
-  updateFeeItem, 
+import {
+  getFeeItems,
+  addFeeItem,
+  updateFeeItem,
   deleteFeeItem,
   getPetSpecies,
   addPetSpecies,
@@ -338,7 +381,10 @@ import {
   addDepartment,
   updateDepartment,
   deleteDepartment,
-  getDepartmentStats
+  getDepartmentStats,
+  getAnnouncements,
+  createAnnouncement,
+  deleteAnnouncement as deleteAnnouncementApi
 } from '@/services/api';
 
 // 当前激活的选项卡
@@ -410,6 +456,24 @@ const departmentForm = reactive({
   status: true
 });
 
+// 品种表单相关
+const breedDialogVisible = ref(false);
+const breedFormRef = ref(null);
+const breedSubmitting = ref(false);
+const breedForm = reactive({
+  speciesId: null,
+  speciesName: '',
+  breedName: '',
+  description: ''
+});
+
+const breedRules = {
+  breedName: [
+    { required: true, message: '请输入品种名称', trigger: 'blur' },
+    { min: 1, max: 100, message: '长度在 1 到 100 个字符', trigger: 'blur' }
+  ]
+};
+
 // 科室表单验证规则
 const departmentRules = {
   name: [
@@ -434,6 +498,7 @@ const petTypeRules = {
 const announcementForm = reactive({
   title: '',
   type: '',
+  category: 'ALL',
   content: ''
 });
 
@@ -539,7 +604,18 @@ onMounted(() => {
   loadFeeItems();
   loadPetTypes();
   loadDepartments();
+  loadAnnouncements();
 });
+
+// 加载公告列表
+const loadAnnouncements = async () => {
+  try {
+    const res = await getAnnouncements();
+    announcements.value = res.data || [];
+  } catch (error) {
+    console.error('加载公告失败:', error);
+  }
+};
 
 // 显示新增费用对话框
 const showAddFeeDialog = () => {
@@ -743,22 +819,57 @@ const deletePetType = async (row) => {
 
 // 显示添加品种对话框
 const showAddBreedDialog = (row) => {
-  ElMessageBox.prompt(`为"${row.typeName}"添加新品种`, '添加品种', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    inputPattern: /.+/,
-    inputErrorMessage: '请输入品种名称'
-  }).then(({ value }) => {
-    // 检查是否已存在
-    const exists = row.breeds.some(breed => breed === value);
+  breedForm.speciesId = row.id;
+  breedForm.speciesName = row.typeName;
+  breedForm.breedName = '';
+  breedForm.description = '';
+  breedDialogVisible.value = true;
+};
+
+// 提交品种表单
+const submitBreedForm = async () => {
+  try {
+    await breedFormRef.value.validate();
+
+    const exists = petTypes.value
+      .find(t => t.id === breedForm.speciesId)
+      ?.breeds.some(breed => breed === breedForm.breedName);
+
     if (exists) {
       ElMessage.warning('该品种已存在');
       return;
     }
-    
-    row.breeds.push(value);
+
+    breedSubmitting.value = true;
+    await addPetBreed({
+      speciesId: breedForm.speciesId,
+      breedName: breedForm.breedName,
+      description: breedForm.description || '',
+      isActive: true
+    });
+
+    const species = petTypes.value.find(t => t.id === breedForm.speciesId);
+    if (species) {
+      species.breeds.push(breedForm.breedName);
+    }
+
     ElMessage.success('品种添加成功');
-  }).catch(() => {});
+    breedDialogVisible.value = false;
+  } catch (error) {
+    if (error !== false) {
+      console.error('添加品种失败:', error);
+      ElMessage.error('添加品种失败');
+    }
+  } finally {
+    breedSubmitting.value = false;
+  }
+};
+
+// 重置品种表单
+const resetBreedForm = () => {
+  if (breedFormRef.value) {
+    breedFormRef.value.resetFields();
+  }
 };
 
 // 移除品种
@@ -886,28 +997,34 @@ const handleDeleteDepartment = async (row) => {
 };
 
 // 公告管理方法
-const publishAnnouncement = () => {
+const publishAnnouncement = async () => {
   if (!announcementForm.title || !announcementForm.type || !announcementForm.content) {
     ElMessage.warning('请填写完整的公告信息');
     return;
   }
-  
-  const newAnnouncement = {
-    id: Date.now(),
-    title: announcementForm.title,
-    type: announcementForm.type,
-    publishDate: new Date().toISOString().split('T')[0],
-    content: announcementForm.content
-  };
-  
-  announcements.value.unshift(newAnnouncement);
-  ElMessage.success('公告发布成功');
-  resetAnnouncementForm();
+
+  try {
+    const newAnnouncement = {
+      title: announcementForm.title,
+      announcementType: announcementForm.type,
+      category: announcementForm.category || 'ALL',
+      content: announcementForm.content
+    };
+
+    const res = await createAnnouncement(newAnnouncement);
+    announcements.value.unshift(res.data);
+    ElMessage.success('公告发布成功');
+    resetAnnouncementForm();
+  } catch (error) {
+    console.error('发布公告失败:', error);
+    ElMessage.error('发布公告失败');
+  }
 };
 
 const resetAnnouncementForm = () => {
   announcementForm.title = '';
   announcementForm.type = '';
+  announcementForm.category = 'ALL';
   announcementForm.content = '';
 };
 
@@ -915,7 +1032,8 @@ const viewAnnouncement = (row) => {
   ElMessageBox.alert(
     `<div style="text-align: left;">
       <h3>${row.title}</h3>
-      <p><strong>类型:</strong> ${getAnnouncementTypeName(row.type)}</p>
+      <p><strong>类型:</strong> ${getAnnouncementTypeName(row.announcementType)}</p>
+      <p><strong>可见:</strong> ${getCategoryName(row.category)}</p>
       <p><strong>发布日期:</strong> ${row.publishDate}</p>
       <hr/>
       <p>${row.content}</p>
@@ -936,12 +1054,17 @@ const deleteAnnouncement = (row) => {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
-    }
-  ).then(() => {
-    const index = announcements.value.findIndex(item => item.id === row.id);
-    if (index !== -1) {
-      announcements.value.splice(index, 1);
-      ElMessage.success('删除成功');
+    }).then(async () => {
+    try {
+      await deleteAnnouncementApi(row.id);
+      const index = announcements.value.findIndex(item => item.id === row.id);
+      if (index !== -1) {
+        announcements.value.splice(index, 1);
+        ElMessage.success('删除成功');
+      }
+    } catch (error) {
+      console.error('删除公告失败:', error);
+      ElMessage.error('删除公告失败');
     }
   }).catch(() => {});
 };
@@ -966,6 +1089,17 @@ const getAnnouncementTypeName = (type) => {
     important: '重要公告'
   };
   return nameMap[type] || '未知';
+};
+
+// 辅助函数：获取可见类别中文名称
+const getCategoryName = (category) => {
+  const nameMap = {
+    'ALL': '全部',
+    'USER': '用户',
+    'RECEPTIONIST': '前台',
+    'DOCTOR': '医生'
+  };
+  return nameMap[category] || '全部';
 };
 </script>
 

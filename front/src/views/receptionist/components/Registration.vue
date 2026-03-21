@@ -133,82 +133,6 @@
         </template>
       </el-dialog>
 
-      <el-tab-pane label="新用户注册并挂号" name="newuser">
-        <el-form label-width="100px" style="max-width: 600px; margin: 20px auto 0;">
-          <el-steps :active="regStep" finish-status="success" simple style="margin-bottom: 20px;">
-            <el-step title="步骤 1: 登记用户信息" />
-            <el-step title="步骤 2: 登记宠物信息" />
-            <el-step title="步骤 3: 确认挂号" />
-          </el-steps>
-
-          <div v-if="regStep === 1">
-            <el-form :model="registerForm" label-width="100px">
-              <el-form-item label="客户姓名">
-                <el-input v-model="registerForm.name" placeholder="必填"></el-input>
-              </el-form-item>
-              <el-form-item label="联系电话">
-                <el-input v-model="registerForm.phone" placeholder="请输入手机号"></el-input>
-              </el-form-item>
-              <el-form-item label="设置密码">
-                <el-input v-model="registerForm.password" type="password" show-password></el-input>
-              </el-form-item>
-            </el-form>
-            <div style="text-align: right;">
-              <el-button type="primary" @click="regStep = 2" :disabled="!registerForm.name || !registerForm.phone">下一步</el-button>
-            </div>
-          </div>
-
-          <div v-if="regStep === 2">
-            <el-form :model="petForm" label-width="100px">
-              <el-form-item label="宠物昵称">
-                <el-input v-model="petForm.name" placeholder="必填"></el-input>
-              </el-form-item>
-              <el-form-item label="种类">
-                <el-radio-group v-model="petForm.species" @change="petForm.breed = ''">
-                  <el-radio label="狗">狗</el-radio>
-                  <el-radio label="猫">猫</el-radio>
-                  <el-radio label="其他">其他</el-radio>
-                </el-radio-group>
-              </el-form-item>
-              <el-form-item label="品种">
-                <el-select v-model="petForm.breed" placeholder="请选择品种" style="width: 100%" filterable>
-                  <el-option v-for="breed in currentBreedOptions" :key="breed" :label="breed" :value="breed"></el-option>
-                </el-select>
-              </el-form-item>
-              <el-form-item label="年龄">
-                <el-input-number v-model="petForm.age" :min="0" :max="30" style="width: 100px;"></el-input-number> 岁
-              </el-form-item>
-            </el-form>
-            <div style="text-align: right;">
-              <el-button @click="regStep = 1">上一步</el-button>
-              <el-button type="primary" @click="regStep = 3" :disabled="!petForm.name || !petForm.breed">下一步</el-button>
-            </div>
-          </div>
-
-          <div v-if="regStep === 3">
-            <el-alert title="用户信息和宠物档案已创建完成，请选择挂号信息。" type="success" show-icon style="margin-bottom: 20px;"></el-alert>
-            <el-form label-width="100px">
-              <el-form-item label="本次就诊宠物">
-                <el-tag type="success">{{ petForm.name }} ({{ petForm.breed }})</el-tag>
-              </el-form-item>
-              <el-form-item label="挂号科室">
-                <el-select v-model="form.dept" placeholder="请选择科室" @change="handleDepartmentChange" :disabled="!!receptionistInfo?.department">
-                  <el-option v-for="dept in availableDepartments" :key="dept.id" :label="dept.name" :value="dept.name"></el-option>
-                </el-select>
-              </el-form-item>
-              <el-form-item label="指定医生">
-                <el-select v-model="form.doctor" placeholder="可不选 (随机分配)" :disabled="!form.dept">
-                  <el-option v-for="doctor in doctors" :key="doctor.id" :label="`${doctor.name || ''} (${doctor.position || '医生'})`" :value="doctor.id"></el-option>
-                </el-select>
-              </el-form-item>
-            </el-form>
-            <div style="text-align: right;">
-              <el-button @click="regStep = 2">上一步</el-button>
-              <el-button type="success" @click="handleFullRegistration">确认挂号并完成注册</el-button>
-            </div>
-          </div>
-        </el-form>
-      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
@@ -217,7 +141,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
-import { getAllUsers, getUserPets, getDepartments, getDoctorsByDepartment, getPetSpecies, getPetBreedsBySpeciesId, registerUser, addPet, getReceptionistInfo, getAllAppointmentsByDepartment, takeNumber, createAppointment, getOnDutyDoctorsByDateAndDepartment } from '@/services/api'
+import { getAllUsers, getUserPets, getDepartments, getPetSpecies, getPetBreedsBySpeciesId, addPet, getReceptionistInfo, getAllAppointmentsByDepartment, takeNumber, createAppointment, getOnDutyDoctorsByDateAndDepartment } from '@/services/api'
 
 const emit = defineEmits(['registration-complete', 'check-in'])
 
@@ -248,36 +172,10 @@ const newPetForm = reactive({
 const speciesList = ref([])
 const newPetBreedList = ref([])
 
-// 新用户注册用的宠物表单（步骤2）
-const petForm = reactive({
-  name: '',
-  species: '',
-  breed: '',
-  age: null
-})
-
-// 品种选项（用于新用户注册的petForm）
-const breedList = ref([])
-
-const currentBreedOptions = computed(() => {
-  if (!petForm.species) return []
-  const species = speciesList.value.find(s => s.speciesName === petForm.species)
-  if (!species) return []
-  return breedList.value.filter(b => b.speciesId === species.id).map(b => b.breedName)
-})
-
-// 动态数据
 const departments = ref([])
 const doctors = ref([])
 const receptionistInfo = ref(null)
 
-// 注册步骤
-const regStep = ref(1)
-
-// 表单数据
-const registerForm = reactive({ name: '', phone: '', password: '' })
-
-// 可用科室（如果前台有指定科室，则只显示该科室）
 const availableDepartments = computed(() => {
   if (receptionistInfo?.department) {
     return departments.value.filter(dept => dept.name === receptionistInfo.department)
@@ -411,26 +309,6 @@ const loadUserPets = async (userId) => {
   }
 }
 
-// 宠物种类变化
-// 种类变化时获取对应品种（用于新用户注册的petForm）
-const onSpeciesChange = async () => {
-  petForm.breed = ''
-  if (petForm.species) {
-    try {
-      const species = speciesList.value.find(s => s.speciesName === petForm.species)
-      if (species) {
-        const breedsRes = await getPetBreedsBySpeciesId(species.id)
-        breedList.value = breedsRes.data || []
-      }
-    } catch (error) {
-      console.error('加载品种列表失败:', error)
-      breedList.value = []
-    }
-  } else {
-    breedList.value = []
-  }
-}
-
 // 新建宠物
 const handleAddPet = async () => {
   if (!newPetForm.name) {
@@ -502,65 +380,6 @@ const handleRegister = async () => {
   } catch (error) {
     console.error('挂号失败:', error)
     ElMessage.error('挂号失败')
-  }
-}
-
-// 注册用户 - 完成注册并挂号
-const handleFullRegistration = async () => {
-  try {
-    const userData = {
-      phone: registerForm.phone,
-      email: '',
-      password: registerForm.password,
-      name: registerForm.name,
-      address: '',
-      role: 'USER'
-    }
-
-    const userRes = await registerUser(userData)
-    const userId = userRes.data.id
-
-    const petData = {
-      userId: userId,
-      name: petForm.name,
-      species: petForm.species,
-      breed: petForm.breed,
-      age: petForm.age,
-      weight: 0,
-      gender: '雄性',
-      medicalHistory: ''
-    }
-    const petRes = await addPet(petData)
-    const petId = petRes.data.id
-
-    const now = new Date()
-    const appointmentData = {
-      userId: userId,
-      petId: petId,
-      doctorId: form.doctor || null,
-      department: form.dept,
-      appointmentDate: now.toISOString().split('T')[0],
-      appointmentTime: now.toTimeString().split(' ')[0],
-      status: 'waiting',
-      reason: '现场挂号'
-    }
-    await createAppointment(appointmentData)
-
-    ElMessage.success(`注册成功！客户：${registerForm.name}，宠物：${petForm.name}。已完成挂号，请等待叫号。`)
-    emit('registration-complete', {
-      userName: registerForm.name,
-      petName: petForm.name,
-      dept: form.dept,
-      doctor: form.doctor
-    })
-
-    Object.assign(registerForm, { name: '', phone: '', password: '' })
-    Object.assign(petForm, { name: '', species: '', breed: '', age: 1 })
-    Object.assign(form, { dept: '', doctor: '' })
-    regStep.value = 1
-  } catch (error) {
-    console.error('注册失败:', error)
-    ElMessage.error('注册失败: ' + (error.response?.data?.error || error.message))
   }
 }
 

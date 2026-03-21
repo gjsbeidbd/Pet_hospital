@@ -74,11 +74,11 @@
                 :class="{ 'weekend': day.isWeekend }"
                 @click="openEditDialog(dept, shift, day)"
               >
-                <template v-if="getScheduleValue(dept, shift, day.date) === '休息'">
+                <template v-if="isRest(dept, shift, day.date)">
                   <el-tag size="small" type="info">休息</el-tag>
                 </template>
-                <template v-else-if="getScheduleValue(dept, shift, day.date)">
-                  <span class="doctor-name">{{ getDoctorName(getScheduleValue(dept, shift, day.date)) }}</span>
+                <template v-else-if="getScheduleValue(dept, shift, day.date).doctorId">
+                  <span class="doctor-name">{{ getDoctorName(getScheduleValue(dept, shift, day.date).doctorId) }}</span>
                 </template>
                 <template v-else>
                   <span class="empty">-</span>
@@ -264,9 +264,16 @@ const getScheduleKey = (dept, shift, date) => {
   return `${dept}_${shift}_${date}`
 }
 
+// 返回 { doctorId, status }
 const getScheduleValue = (dept, shift, date) => {
   const key = getScheduleKey(dept, shift, date)
-  return scheduleMap.value[key] || ''
+  return scheduleMap.value[key] || { doctorId: '', status: 'active' }
+}
+
+// 检查是否为休息状态
+const isRest = (dept, shift, date) => {
+  const value = getScheduleValue(dept, shift, date)
+  return value.status === 'rest' || (value.doctorId === '' && value.status === 'rest')
 }
 
 const fetchAllDoctors = async () => {
@@ -296,7 +303,10 @@ const fetchScheduleData = async () => {
     if (res.data && res.data.data && Array.isArray(res.data.data)) {
       res.data.data.forEach(item => {
         const key = getScheduleKey(item.department, item.shiftType, item.scheduleDate)
-        scheduleMap.value[key] = item.doctorId?.toString() || ''
+        scheduleMap.value[key] = {
+          doctorId: item.doctorId?.toString() || '',
+          status: item.status || 'active'
+        }
       })
     }
   } catch (error) {
@@ -374,7 +384,7 @@ const confirmAutoSchedule = async () => {
 
 const openEditDialog = (dept, shift, day) => {
   const doctors = getDoctorsByDept(dept)
-  const currentDoctorId = getScheduleValue(dept, shift, day.date)
+  const currentValue = getScheduleValue(dept, shift, day.date)
 
   let dayLabel = day.label
   if (day.isWeekend) {
@@ -386,7 +396,7 @@ const openEditDialog = (dept, shift, day) => {
     date: day.date,
     dayLabel: dayLabel,
     shift: shift,
-    doctorId: currentDoctorId === '休息' ? 'rest' : currentDoctorId,
+    doctorId: currentValue.status === 'rest' ? 'rest' : currentValue.doctorId,
     doctors: doctors
   }
   editDialogVisible.value = true

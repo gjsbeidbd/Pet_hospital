@@ -121,6 +121,29 @@ public class AppointmentController {
         return ResponseEntity.ok(appointments);
     }
 
+    // 根据医生ID获取今日预约
+    @GetMapping("/doctor")
+    public ResponseEntity<List<Appointment>> getAppointmentsByDoctorId(@RequestParam Long doctorId) {
+        List<Appointment> appointments = appointmentService.getAppointmentsByDoctorId(doctorId);
+        appointments.forEach(app -> {
+            if (app.getPetId() != null) {
+                Pet pet = petMapper.selectById(app.getPetId());
+                if (pet != null) {
+                    app.setPetName(pet.getName());
+                    app.setPetSpecies(pet.getSpecies());
+                    app.setPetBreed(pet.getBreed());
+                }
+            }
+            if (app.getUserId() != null) {
+                User user = userMapper.selectById(app.getUserId());
+                if (user != null) {
+                    app.setUserName(user.getName());
+                }
+            }
+        });
+        return ResponseEntity.ok(appointments);
+    }
+
     // 根据科室获取所有预约（用于前台）
     @GetMapping("/all-by-department")
     public ResponseEntity<List<Appointment>> getAllAppointmentsByDepartment(@RequestParam String department) {
@@ -216,6 +239,12 @@ public class AppointmentController {
     @GetMapping("/today-completed/count")
     public ResponseEntity<Map<String, Object>> getTodayCompletedCount() {
         int count = appointmentService.getTodayCompletedCount();
+        return ResponseEntity.ok(Map.of("data", count));
+    }
+
+    @GetMapping("/today-completed/department")
+    public ResponseEntity<Map<String, Object>> getTodayCompletedCountByDepartment(@RequestParam String department) {
+        int count = appointmentService.getTodayCompletedCountByDepartment(department);
         return ResponseEntity.ok(Map.of("data", count));
     }
 

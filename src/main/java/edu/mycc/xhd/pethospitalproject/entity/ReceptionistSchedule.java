@@ -16,13 +16,14 @@ public class ReceptionistSchedule {
     private String startTime;
     private String endTime;
     private String shiftType;
+    private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public ReceptionistSchedule() {}
 
-    public ReceptionistSchedule(Long id, Long receptionistId, String department, String scheduleDate, 
-                               String startTime, String endTime, String shiftType, 
+    public ReceptionistSchedule(Long id, Long receptionistId, String department, String scheduleDate,
+                               String startTime, String endTime, String shiftType, String status,
                                LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.receptionistId = receptionistId;
@@ -31,6 +32,7 @@ public class ReceptionistSchedule {
         this.startTime = startTime;
         this.endTime = endTime;
         this.shiftType = shiftType;
+        this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -89,6 +91,14 @@ public class ReceptionistSchedule {
 
     public void setShiftType(String shiftType) {
         this.shiftType = shiftType;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public LocalDateTime getCreatedAt() {

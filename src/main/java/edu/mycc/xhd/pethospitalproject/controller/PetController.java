@@ -41,7 +41,7 @@ public class PetController {
     public ResponseEntity<?> addPet(@RequestBody Pet pet) {
         boolean success = petService.addPet(pet);
         if (success) {
-            return ResponseEntity.ok().body(java.util.Map.of("message", "宠物添加成功"));
+            return ResponseEntity.ok().body(java.util.Map.of("message", "宠物添加成功", "id", pet.getId()));
         } else {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", "宠物添加失败"));
         }

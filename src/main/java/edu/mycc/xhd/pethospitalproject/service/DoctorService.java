@@ -40,4 +40,14 @@ public class DoctorService extends ServiceImpl<DoctorMapper, Doctor> {
     public Doctor getDoctorById(Long id) {
         return doctorMapper.selectById(id);
     }
+
+    public boolean changePassword(Long id, String oldPassword, String newPassword) {
+        Doctor doctor = doctorMapper.selectById(id);
+        if (doctor != null && doctor.getPassword().equals(oldPassword)) {
+            doctor.setPassword(newPassword);
+            int result = doctorMapper.updateById(doctor);
+            return result > 0;
+        }
+        return false;
+    }
 }

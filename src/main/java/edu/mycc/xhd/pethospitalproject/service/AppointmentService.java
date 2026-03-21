@@ -30,6 +30,9 @@ public interface AppointmentService {
     // 获取所有预约
     List<Appointment> getAllAppointments();
 
+    // 根据医生ID获取今日预约
+    List<Appointment> getAppointmentsByDoctorId(Long doctorId);
+
     // 根据科室获取所有预约（用于前台）
     List<Appointment> getAllAppointmentsByDepartment(String department);
 
@@ -38,6 +41,9 @@ public interface AppointmentService {
 
     // 获取今日已完成预约数量
     int getTodayCompletedCount();
+
+    // 根据科室获取今日已完成预约数量
+    int getTodayCompletedCountByDepartment(String department);
 
     int getMonthCompletedCount();
 

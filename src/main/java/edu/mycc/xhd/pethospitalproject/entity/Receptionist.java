@@ -20,6 +20,7 @@ public class Receptionist {
     private String status;
     private String department; // 科室
     private String position; // 职称（如：护士、护师、主管护师）
+    private String avatar; // 头像路径
 
     // Constructors
     public Receptionist() {}
@@ -145,5 +146,13 @@ public class Receptionist {
 
     public void setPosition(String position) {
         this.position = position;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
     }
 }

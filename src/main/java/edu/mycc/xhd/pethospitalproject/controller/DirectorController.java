@@ -61,7 +61,7 @@ public class DirectorController {
         
         if (!director.getPassword().equals(oldPassword)) {
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "原密码错误");
+            errorResponse.put("error", "旧密码输入错误，请重新输入！");
             return ResponseEntity.status(401).body(errorResponse);
         }
         

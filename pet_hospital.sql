@@ -80,6 +80,7 @@ CREATE TABLE receptionists (
     hire_date DATE COMMENT '入职日期',
     password VARCHAR(255) NOT NULL COMMENT '密码',
     status ENUM('active', 'inactive') DEFAULT 'active' COMMENT '状态',
+    avatar VARCHAR(500) COMMENT '头像路径',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     -- 确保手机号和邮箱至少有一个不为空
@@ -100,6 +101,7 @@ CREATE TABLE doctors (
     position VARCHAR(100) COMMENT '职称（如：住院医师、主治医师等）',
     phone VARCHAR(20) UNIQUE COMMENT '电话（唯一）',
     email VARCHAR(100) UNIQUE COMMENT '邮箱（唯一）',
+    avatar VARCHAR(500) COMMENT '头像路径',
     hire_date DATE COMMENT '入职日期',
     password VARCHAR(255) NOT NULL COMMENT '密码',
     status ENUM('active', 'inactive') DEFAULT 'active' COMMENT '状态',
@@ -154,6 +156,7 @@ CREATE TABLE doctor_schedules (
     shift_type VARCHAR(50) COMMENT '班次类型（DAY-白班，EMERGENCY-急诊班，BOTH-both）',
     is_emergency_24h BOOLEAN DEFAULT FALSE COMMENT '是否急诊 24 小时',
     emergency_period VARCHAR(50) COMMENT '急诊时段（MORNING-早班，MIDDLE-中班，NIGHT-晚班）',
+    status VARCHAR(20) DEFAULT 'active' COMMENT 'active-正常工作, rest-休息',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE,
@@ -172,6 +175,7 @@ CREATE TABLE receptionist_schedules (
     start_time TIME NOT NULL COMMENT '开始时间',
     end_time TIME NOT NULL COMMENT '结束时间',
     shift_type VARCHAR(50) COMMENT '班次类型',
+    status VARCHAR(20) DEFAULT 'active' COMMENT 'active-正常工作, rest-休息',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     FOREIGN KEY (receptionist_id) REFERENCES receptionists(id) ON DELETE CASCADE,
@@ -362,7 +366,8 @@ CREATE TABLE announcements (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     title VARCHAR(200) NOT NULL COMMENT '标题',
     content TEXT NOT NULL COMMENT '内容',
-    author VARCHAR(100) COMMENT '作者',
+    announcement_type VARCHAR(50) DEFAULT 'system' COMMENT '公告类型',
+    category VARCHAR(50) DEFAULT 'ALL' COMMENT '可见类别',
     publish_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '发布日期',
     is_active BOOLEAN DEFAULT TRUE COMMENT '是否激活',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -541,9 +546,9 @@ INSERT INTO drug_inventory (code, name, type, price, stock, warning_stock, unit,
 ('D004', '体内驱虫片', '驱虫药', 45.00, 15, 20, '粒', FALSE);
 
 -- 插入公告信息
-INSERT INTO announcements (title, content, author, is_active) VALUES
-('医院春节放假通知', '本院将于春节期间（2026年2月10日-2月17日）放假，2月18日正式上班。急诊24小时开放。', '院长办公室', TRUE),
-('新增在线预约功能', '即日起，用户可通过官网进行在线预约挂号，方便快捷。', '信息技术部', TRUE);
+INSERT INTO announcements (title, content, announcement_type, category, is_active) VALUES
+('医院春节放假通知', '本院将于春节期间（2026年2月10日-2月17日）放假，2月18日正式上班。急诊24小时开放。', 'important', 'ALL', TRUE),
+('新增在线预约功能', '即日起，用户可通过官网进行在线预约挂号，方便快捷。', 'news', 'ALL', TRUE);
 
 -- 插入医院设置
 INSERT INTO hospital_settings (setting_key, setting_value, description) VALUES

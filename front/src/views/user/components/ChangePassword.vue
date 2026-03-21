@@ -186,7 +186,7 @@ const handleChangePassword = () => {
         passwordForm.confirmPassword = ''
       } catch (error) {
         console.error('修改密码失败:', error)
-        ElMessage.error('修改密码失败: ' + (error.response?.data?.error || '未知错误'))
+        ElMessage.error(error.response?.data?.error || '修改密码失败')
       }
     }
   })

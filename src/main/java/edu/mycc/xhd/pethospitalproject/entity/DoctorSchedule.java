@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 public class DoctorSchedule {
     @TableId(type = IdType.AUTO)
     private Long id;
-    private Long doctorId; // 改为 Long 类型
+    private Long doctorId;
     private String department;
     private String scheduleDate;
     private String startTime;
@@ -19,15 +19,16 @@ public class DoctorSchedule {
     private String shiftType;
     @TableField("is_emergency_24h")
     private Boolean emergency24h;
-    private String emergencyPeriod; // 急诊时段
+    private String emergencyPeriod;
+    private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public DoctorSchedule() {}
 
-    public DoctorSchedule(Long id, Long doctorId, String department, String scheduleDate, String startTime, 
+    public DoctorSchedule(Long id, Long doctorId, String department, String scheduleDate, String startTime,
                          String endTime, String shiftType, Boolean emergency24h, String emergencyPeriod,
-                         LocalDateTime createdAt, LocalDateTime updatedAt) {
+                         String status, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.doctorId = doctorId;
         this.department = department;
@@ -37,6 +38,7 @@ public class DoctorSchedule {
         this.shiftType = shiftType;
         this.emergency24h = emergency24h;
         this.emergencyPeriod = emergencyPeriod;
+        this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -111,6 +113,14 @@ public class DoctorSchedule {
 
     public void setEmergencyPeriod(String emergencyPeriod) {
         this.emergencyPeriod = emergencyPeriod;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public LocalDateTime getCreatedAt() {

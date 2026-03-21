@@ -10,6 +10,7 @@ import DirectorStaffManagement from './components/DirectorStaffManagement.vue';
 import DrugInventory from './components/DrugInventory.vue';
 import HospitalSettings from './components/HospitalSettings.vue';
 import PersonalCenter from './components/PersonalCenter.vue';
+import DirectorChangePassword from './components/DirectorChangePassword.vue';
 import DoctorScheduleBoard from './components/DoctorScheduleBoard.vue';
 import NurseScheduleBoard from './components/NurseScheduleBoard.vue';
 
@@ -76,11 +77,11 @@ const menuList = [
     children: [
       {
         index: '7-1',
-        title: '个人信息'
+        title: '信息管理'
       },
       {
         index: '7-2',
-        title: '账户安全'
+        title: '账户管理'
       }
     ]
   }
@@ -188,7 +189,7 @@ onMounted(() => {
     
     <!-- 个人中心 - 账户安全 -->
     <div v-if="activeMenu === '7-2'">
-      <PersonalCenter activeType="security" />
+      <DirectorChangePassword />
     </div>
   </Layout>
 </template>

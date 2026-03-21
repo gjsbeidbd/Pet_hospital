@@ -1,6 +1,7 @@
 package edu.mycc.xhd.pethospitalproject.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
@@ -10,6 +11,10 @@ public class Director {
     private Long id;
     private String employeeId;
     private String name;
+    private String birthday;
+    @TableField("id_card")
+    private String idCard;
+    private String address;
     private String phone;
     private String email;
     private String hireDate;
@@ -57,7 +62,31 @@ public class Director {
     public void setName(String name) {
         this.name = name;
     }
-    
+
+    public String getBirthday() {
+        return birthday;
+    }
+
+    public void setBirthday(String birthday) {
+        this.birthday = birthday;
+    }
+
+    public String getIdCard() {
+        return idCard;
+    }
+
+    public void setIdCard(String idCard) {
+        this.idCard = idCard;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
     public String getPhone() {
         return phone;
     }

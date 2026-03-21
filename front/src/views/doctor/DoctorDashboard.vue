@@ -16,6 +16,7 @@ import MedicalRecords from './components/MedicalRecords.vue'
 import Schedule from './components/Schedule.vue'
 import DoctorProfile from './components/DoctorProfile.vue'
 import DoctorChangePassword from './components/DoctorChangePassword.vue'
+import DoctorHome from './components/DoctorHome.vue'
 
 // ========== 响应式状态 ==========
 const activeMenu = ref('1')
@@ -31,31 +32,36 @@ const router = useRouter()
 const menuList = [
   {
     index: '1',
+    title: '首页',
+    icon: 'HomeFilled'
+  },
+  {
+    index: '2',
     title: '接诊工作台',
     icon: 'Monitor'
   },
   {
-    index: '2',
+    index: '3',
     title: '病历查询',
     icon: 'DocumentCopy'
   },
   {
-    index: '3',
+    index: '4',
     title: '排班表查看',
     icon: 'Calendar'
   },
   {
-    index: '4',
+    index: '5',
     title: '个人中心',
     icon: 'User',
     children: [
       {
-        index: '4-1',
+        index: '5-1',
         title: '信息管理',
         icon: 'Edit'
       },
       {
-        index: '4-2',
+        index: '5-2',
         title: '账户管理',
         icon: 'Lock'
       }
@@ -155,13 +161,13 @@ const fetchUserInfo = async () => {
       const response = await getDoctorInfo(userId)
       console.log('医生信息:', response.data)
       userName.value = response.data.name || '医生'
-      // 设置用户头像
-      let avatarUrl = response.data.image || 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
+      let avatarUrl = response.data.avatar || 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
       if (avatarUrl && !avatarUrl.startsWith('http') && !avatarUrl.startsWith('https')) {
         avatarUrl = 'http://localhost:8080' + avatarUrl
       }
       userAvatar.value = avatarUrl
       doctorInfo.value = response.data
+      localStorage.setItem('doctorInfo', JSON.stringify(response.data))
       
       // 加载候诊列表
       if (response.data.department) {
@@ -233,10 +239,15 @@ const loadWaitingList = async (department) => {
     ref="layoutRef"
     @update:active-menu="handleActiveMenuUpdate"
   >
-    <!-- 接诊工作台 -->
+    <!-- 医生首页 -->
     <div v-if="activeMenu === '1'">
-      <Consultation 
-        :waiting-list="waitingList" 
+      <DoctorHome />
+    </div>
+
+    <!-- 接诊工作台 -->
+    <div v-if="activeMenu === '2'">
+      <Consultation
+        :waiting-list="waitingList"
         :drug-options="drugOptions"
         @call-patient="handleCallPatient"
         @finish-diagnose="handleFinishDiagnose"
@@ -246,22 +257,22 @@ const loadWaitingList = async (department) => {
     </div>
 
     <!-- 病历查询 -->
-    <div v-if="activeMenu === '2'">
+    <div v-if="activeMenu === '3'">
       <MedicalRecords />
     </div>
 
     <!-- 我的排班 -->
-    <div v-if="activeMenu === '3'">
+    <div v-if="activeMenu === '4'">
       <Schedule />
     </div>
 
-    <!-- 4-1. 个人信息 -->
-    <div v-if="activeMenu === '4-1'">
+    <!-- 5-1. 信息管理 -->
+    <div v-if="activeMenu === '5-1'">
       <DoctorProfile />
     </div>
 
-    <!-- 4-2. 修改密码 -->
-    <div v-if="activeMenu === '4-2'">
+    <!-- 5-2. 账户管理 -->
+    <div v-if="activeMenu === '5-2'">
       <DoctorChangePassword />
     </div>
   </Layout>

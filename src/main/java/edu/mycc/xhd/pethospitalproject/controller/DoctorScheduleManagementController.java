@@ -208,10 +208,10 @@ public class DoctorScheduleManagementController {
                 return result;
             }
             
-            // 第二步：提取不重复的医生 ID
+            // 第二步：提取不重复的医生 ID（排除休息状态的排班）
             java.util.Set<Long> doctorIdsSet = new java.util.HashSet<>();
             for (DoctorSchedule schedule : schedules) {
-                if (schedule.getDoctorId() != null) {
+                if (schedule.getDoctorId() != null && !"rest".equals(schedule.getStatus())) {
                     doctorIdsSet.add(schedule.getDoctorId());
                 }
             }

@@ -31,11 +31,13 @@ api.interceptors.response.use(
   },
   error => {
     if (error.response?.status === 401) {
-      // token过期或无效，清除本地存储并跳转到登录页
+      const errorData = error.response?.data;
+      if (errorData?.error) {
+        return Promise.reject(error);
+      }
       localStorage.removeItem('token');
       localStorage.removeItem('userRole');
       localStorage.removeItem('userId');
-      // 如果不在登录页，则跳转到登录页
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
@@ -54,8 +56,37 @@ export const getReceptionistInfo = (receptionistId) => {
   return api.get(`/api/auth/receptionist/${receptionistId}`);
 };
 
+export const updateReceptionistInfo = (receptionistId, data) => {
+  return api.put(`/api/auth/receptionist/${receptionistId}`, data);
+};
+
+export const changeReceptionistPassword = (receptionistId, passwordData) => {
+  return api.put(`/api/auth/receptionist/${receptionistId}/password`, passwordData);
+};
+
 export const getDoctorInfo = (doctorId) => {
   return api.get(`/api/auth/doctor/${doctorId}`);
+};
+
+export const updateDoctorInfo = (doctorId, data) => {
+  return api.put(`/api/auth/doctor/${doctorId}`, data);
+};
+
+export const changeDoctorPassword = (doctorId, passwordData) => {
+  return api.put(`/api/auth/doctor/${doctorId}/password`, passwordData);
+};
+
+export const getAnnouncements = (category) => {
+  const params = category ? { category } : {};
+  return api.get('/api/announcements', { params });
+};
+
+export const createAnnouncement = (announcementData) => {
+  return api.post('/api/announcements', announcementData);
+};
+
+export const deleteAnnouncement = (id) => {
+  return api.delete(`/api/announcements/${id}`);
 };
 
 // 获取所有用户（客户）
@@ -109,13 +140,15 @@ export const deleteUserInfo = (userId) => {
 };
 
 // 上传用户头像
-export const uploadUserAvatar = (formData) => {
-  return api.post('/api/avatar/avatar', formData, {
+export const uploadAvatar = (formData) => {
+  return api.post('/api/avatar/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
   });
 };
+
+export const uploadUserAvatar = uploadAvatar;
 
 // 获取用户宠物列表
 export const getUserPets = (userId) => {
@@ -150,6 +183,11 @@ export const getMedicalRecordsByPetId = (petId) => {
 // 获取医生病历列表
 export const getMedicalRecordsByDoctorId = (doctorId) => {
   return api.get(`/api/medical-records/doctor?doctorId=${doctorId}`);
+};
+
+// 获取医生病历详情列表（包含关联数据）
+export const getMedicalRecordDetailsByDoctorId = (doctorId) => {
+  return api.get(`/api/medical-records/doctor/detail?doctorId=${doctorId}`);
 };
 
 // 获取所有病历详情
@@ -480,6 +518,11 @@ export const getAllAppointments = () => {
   return api.get('/api/appointments/all');
 };
 
+// 根据医生ID获取今日预约
+export const getAppointmentsByDoctorId = (doctorId) => {
+  return api.get(`/api/appointments/doctor?doctorId=${doctorId}`);
+};
+
 // 根据科室获取所有预约（用于前台）
 export const getAllAppointmentsByDepartment = (department) => {
   return api.get('/api/appointments/all-by-department?department=' + encodeURIComponent(department));
@@ -506,6 +549,10 @@ export const finishConsultation = (appointmentId, doctorId) => {
 // 统计相关 API
 export const getTodayCompletedCount = () => {
   return api.get('/api/appointments/today-completed/count');
+};
+
+export const getTodayCompletedCountByDepartment = (department) => {
+  return api.get(`/api/appointments/today-completed/department?department=${encodeURIComponent(department)}`);
 };
 
 export const getPendingBillingCount = () => {

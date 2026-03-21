@@ -56,6 +56,15 @@ public class DirectorService {
         if (director.getName() != null) {
             existingDirector.setName(director.getName());
         }
+        if (director.getBirthday() != null) {
+            existingDirector.setBirthday(director.getBirthday());
+        }
+        if (director.getIdCard() != null) {
+            existingDirector.setIdCard(director.getIdCard());
+        }
+        if (director.getAddress() != null) {
+            existingDirector.setAddress(director.getAddress());
+        }
         if (director.getPhone() != null) {
             existingDirector.setPhone(director.getPhone());
         }

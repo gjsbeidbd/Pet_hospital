@@ -77,6 +77,11 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
     }
 
     @Override
+    public List<Appointment> getAppointmentsByDoctorId(Long doctorId) {
+        return appointmentMapper.selectByDoctorId(doctorId);
+    }
+
+    @Override
     public List<Appointment> getAllAppointmentsByDepartment(String department) {
         if (department == null || department.isEmpty()) {
             return new java.util.ArrayList<>();
@@ -140,6 +145,11 @@ public class AppointmentServiceImpl extends ServiceImpl<AppointmentMapper, Appoi
         wrapper.eq("status", "completed");
         wrapper.apply("DATE(appointment_date) = CURRENT_DATE");
         return baseMapper.selectCount(wrapper).intValue();
+    }
+
+    @Override
+    public int getTodayCompletedCountByDepartment(String department) {
+        return appointmentMapper.countTodayCompletedByDepartment(department);
     }
 
     @Override

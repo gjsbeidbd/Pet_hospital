@@ -80,7 +80,7 @@ public class UserController {
             response.put("message", "密码修改成功");
             return ResponseEntity.ok(response);
         } else {
-            response.put("error", "密码修改失败");
+            response.put("error", "旧密码输入错误，请重新输入！");
             return ResponseEntity.badRequest().body(response);
         }
     }

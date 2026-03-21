@@ -74,7 +74,7 @@
                 v-model:current-page="currentPageDoctor"
                 v-model:page-size="pageSizeDoctor"
                 :page-sizes="[10, 20, 50, 100]"
-                :total="filteredDoctorList.length"
+                :total="doctorTotal"
                 layout="total, sizes, prev, pager, next, jumper"
                 @size-change="handleSizeChangeDoctor"
                 @current-change="handleCurrentChangeDoctor"
@@ -154,7 +154,7 @@
                 v-model:current-page="currentPageNurse"
                 v-model:page-size="pageSizeNurse"
                 :page-sizes="[10, 20, 50, 100]"
-                :total="filteredNurseList.length"
+                :total="nurseTotal"
                 layout="total, sizes, prev, pager, next, jumper"
                 @size-change="handleSizeChangeNurse"
                 @current-change="handleCurrentChangeNurse"
@@ -201,22 +201,14 @@
           <el-col :span="12">
             <el-form-item label="职称" prop="position">
               <el-select v-model="doctorForm.position" placeholder="请选择职称" style="width: 100%">
-                <el-option 
-                  label="住院医师" 
-                  value="住院医师"
-                ></el-option>
-                <el-option 
-                  label="主治医师" 
-                  value="主治医师"
-                ></el-option>
-                <el-option 
-                  label="副主任医师" 
-                  value="副主任医师"
-                ></el-option>
-                <el-option 
-                  label="主任医师" 
-                  value="主任医师"
-                ></el-option>
+                <el-option label="住院医师" value="住院医师"></el-option>
+                <el-option label="主治医师" value="主治医师"></el-option>
+                <el-option label="副主任医师" value="副主任医师"></el-option>
+                <el-option label="主任医师" value="主任医师"></el-option>
+                <el-option label="药师" value="药师"></el-option>
+                <el-option label="主管药师" value="主管药师"></el-option>
+                <el-option label="技师" value="技师"></el-option>
+                <el-option label="主管技师" value="主管技师"></el-option>
               </el-select>
             </el-form-item>
           </el-col>
@@ -456,6 +448,12 @@ const selectedDepartmentNurse = ref('')
 const currentPageNurse = ref(1)
 const pageSizeNurse = ref(10)
 
+// 医生职称列表
+const doctorPositions = ['住院医师', '主治医师', '副主任医师', '主任医师', '药师', '主管药师', '技师', '主管技师']
+
+// 护士职称列表
+const nursePositions = ['护士', '护师', '主管护师']
+
 // 加载员工数据
 const loadStaffList = async () => {
   try {
@@ -471,12 +469,12 @@ const loadStaffList = async () => {
       address: item.address || '',
       position: item.position, // 职称
       status: item.status,
-      role: item.position ? '护士' : '前台' // 根据职称判断，有职称为护士，否则为前台
+      role: item.position ? (doctorPositions.includes(item.position) ? '医生' : '护士') : '前台'
     }));
     
     // 分离医生和护士/前台数据
-    doctorList.value = allStaff.filter(staff => staff.position && ['住院医师', '主治医师', '副主任医师', '主任医师'].includes(staff.position));
-    nurseList.value = allStaff.filter(staff => !staff.position || ['护士', '护师', '主管护师'].includes(staff.position));
+    doctorList.value = allStaff.filter(staff => staff.position && doctorPositions.includes(staff.position));
+    nurseList.value = allStaff.filter(staff => !staff.position || nursePositions.includes(staff.position));
   } catch (error) {
     console.error('加载员工数据失败:', error);
     ElMessage.error('加载员工数据失败，请检查后端服务');
@@ -553,6 +551,25 @@ const filteredDoctorList = computed(() => {
   return filtered.slice(start, end)
 })
 
+// 医生列表总数量（用于分页）
+const doctorTotal = computed(() => {
+  let filtered = doctorList.value
+  
+  if (selectedDepartmentDoctor.value) {
+    filtered = filtered.filter(staff => staff.department === selectedDepartmentDoctor.value)
+  }
+  
+  if (searchKeywordDoctor.value) {
+    const keyword = searchKeywordDoctor.value.toLowerCase()
+    filtered = filtered.filter(staff => 
+      staff.name.toLowerCase().includes(keyword) || 
+      staff.employeeId.includes(keyword)
+    )
+  }
+  
+  return filtered.length
+})
+
 // 计算属性 - 过滤后的护士列表
 const filteredNurseList = computed(() => {
   let filtered = nurseList.value
@@ -572,6 +589,25 @@ const filteredNurseList = computed(() => {
   const start = (currentPageNurse.value - 1) * pageSizeNurse.value
   const end = start + pageSizeNurse.value
   return filtered.slice(start, end)
+})
+
+// 护士列表总数量（用于分页）
+const nurseTotal = computed(() => {
+  let filtered = nurseList.value
+  
+  if (selectedDepartmentNurse.value) {
+    filtered = filtered.filter(staff => staff.department === selectedDepartmentNurse.value)
+  }
+  
+  if (searchKeywordNurse.value) {
+    const keyword = searchKeywordNurse.value.toLowerCase()
+    filtered = filtered.filter(staff => 
+      staff.name.toLowerCase().includes(keyword) || 
+      staff.employeeId.includes(keyword)
+    )
+  }
+  
+  return filtered.length
 })
 
 // 医生相关的事件处理

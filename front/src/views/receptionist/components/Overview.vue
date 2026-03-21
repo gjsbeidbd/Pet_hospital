@@ -140,7 +140,7 @@ import {
   Money,
   UserFilled
 } from '@element-plus/icons-vue'
-import { getAllAppointments, getAllAppointmentsByDepartment, takeNumber, getReceptionistInfo, getTodayCompletedCount, getPendingBillingCount, getTodayNewUsersCount } from '@/services/api'
+import { getAllAppointments, getAllAppointmentsByDepartment, takeNumber, getReceptionistInfo, getTodayCompletedCountByDepartment, getPendingBillingCount, getTodayNewUsersCount } from '@/services/api'
 
 // 分页相关数据
 const currentPage = ref(1)
@@ -172,6 +172,7 @@ const loadReceptionistInfo = async () => {
       const res = await getReceptionistInfo(userId)
       receptionistInfo.value = res.data
       console.log('加载前台信息:', receptionistInfo.value)
+      loadStatistics()
     }
   } catch (error) {
     console.error('加载前台信息失败:', error)
@@ -182,14 +183,14 @@ const loadReceptionistInfo = async () => {
 onMounted(async () => {
   await loadReceptionistInfo()
   loadAppointments()
-  loadStatistics()
 })
 
 // 加载统计数据
 const loadStatistics = async () => {
   try {
+    const department = receptionistInfo.value?.department || ''
     const [completedRes, billingRes, newUsersRes] = await Promise.all([
-      getTodayCompletedCount(),
+      getTodayCompletedCountByDepartment(department),
       getPendingBillingCount(),
       getTodayNewUsersCount()
     ])
